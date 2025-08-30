@@ -7,7 +7,8 @@
     "build": "next build",
     "start": "next start",
     "lint": "next lint",
-    "export": "next export"
+    "export": "next export",
+    "deploy": "npm run build && tar -czf next-build.tar.gz .next && scp next-build.tar.gz ec2-user@codecrane.me:/home/ec2-user/next-messenger-frontend-v1/ && ssh ec2-user@codecrane.me 'cd /home/ec2-user/next-messenger-frontend-v1 && tar -xzf next-build.tar.gz && rm next-build.tar.gz' && rm next-build.tar.gz"
   },
   "dependencies": {
     "@prisma/client": "^6.15.0",
