@@ -58,18 +58,67 @@ export default function MessengerMaster() {
   const [message, setMessage] = useState('');
   const { messages, isConnected } = useMessages('chat');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isUploading, setIsUploading] = useState(false);
+  const [isSending, setIsSending] = useState(false);
 
   const handleMessageSend = async () => {
-    if (!message.trim()) return;
+    if (!message.trim() && !selectedFile) return;
     
     if (!remoteUser?.public_key) {
       console.error('Remote user public key not available');
       return;
     }
+
+    setIsSending(true);
     
     try {
-      const encryptedMessage = await encryptMessage(message.trim(), remoteUser.public_key);
+      let messageToSend = message.trim();
+
+      // If there's a selected file, upload it first
+      if (selectedFile) {
+        // Get presigned URL
+        const presignedResponse = await fetch('/api/upload/presigned-url', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            fileName: selectedFile.name,
+            fileType: selectedFile.type,
+            fileSize: selectedFile.size,
+          }),
+        });
+
+        if (!presignedResponse.ok) {
+          throw new Error('Failed to get presigned URL');
+        }
+
+        const { presignedUrl, key } = await presignedResponse.json();
+
+        // Upload file to S3
+        const uploadResponse = await fetch(presignedUrl, {
+          method: 'PUT',
+          body: selectedFile,
+          headers: {
+            'Content-Type': selectedFile.type,
+          },
+        });
+
+        if (!uploadResponse.ok) {
+          throw new Error('Failed to upload file');
+        }
+
+        // Construct S3 URL
+        const fileUrl = `https://next-messenger.s3.ap-southeast-1.amazonaws.com/${key}`;
+        
+        // Append file info to message
+        const fileInfo = `(${selectedFile.name})[${fileUrl}]`;
+        messageToSend = messageToSend ? `${messageToSend} ${fileInfo}` : fileInfo;
+
+        console.log('File uploaded successfully:', key);
+      }
+
+      // Encrypt and send the message
+      const encryptedMessage = await encryptMessage(messageToSend, remoteUser.public_key);
       
       const response = await fetch('/api/messages', {
         method: 'POST',
@@ -85,11 +134,20 @@ export default function MessengerMaster() {
       if (response.ok) {
         console.log('Message sent successfully');
         setMessage('');
+        setSelectedFile(null);
+        
+        // Reset file input
+        const fileInput = document.getElementById('file-input') as HTMLInputElement;
+        if (fileInput) {
+          fileInput.value = '';
+        }
       } else {
         console.error('Failed to send message');
       }
     } catch (error) {
       console.error('Error sending message:', error);
+    } finally {
+      setIsSending(false);
     }
   }
 
@@ -101,65 +159,9 @@ export default function MessengerMaster() {
     }
   };
 
-  const handleSendFileClick = async () => {
-    console.log(selectedFile);
-    if (!selectedFile) {
-      const fileInput = document.getElementById('file-input') as HTMLInputElement;
-      fileInput?.click();
-      return;
-    }
-
-    setIsUploading(true);
-    
-    try {
-      // Get presigned URL
-      const presignedResponse = await fetch('/api/upload/presigned-url', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          fileName: selectedFile.name,
-          fileType: selectedFile.type,
-          fileSize: selectedFile.size,
-        }),
-      });
-
-      if (!presignedResponse.ok) {
-        throw new Error('Failed to get presigned URL');
-      }
-
-      const { presignedUrl, key } = await presignedResponse.json();
-
-      // Upload file to S3
-      const uploadResponse = await fetch(presignedUrl, {
-        method: 'PUT',
-        body: selectedFile,
-        headers: {
-          'Content-Type': selectedFile.type,
-        },
-      });
-
-      if (!uploadResponse.ok) {
-        throw new Error('Failed to upload file');
-      }
-
-      console.log('File uploaded successfully:', key);
-      
-      // Clear selected file after successful upload
-      setSelectedFile(null);
-      
-      // Reset file input
-      const fileInput = document.getElementById('file-input') as HTMLInputElement;
-      if (fileInput) {
-        fileInput.value = '';
-      }
-
-    } catch (error) {
-      console.error('Error uploading file:', error);
-    } finally {
-      setIsUploading(false);
-    }
+  const handleSendFileClick = () => {
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    fileInput?.click();
   };
 
   useEffect(() => {
@@ -263,27 +265,24 @@ export default function MessengerMaster() {
           />
           <button
             onClick={handleMessageSend}
-            className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
+            disabled={isSending}
+            className={`px-4 py-2 text-white rounded-md ${
+              isSending 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : 'bg-blue-600 hover:bg-blue-700'
+            }`}
           >
-            Send
+            {isSending ? 'Sending...' : 'Send'}
           </button>
           <button
             onClick={handleSendFileClick}
-            disabled={isUploading}
             className={`px-4 py-2 text-white rounded-md ${
-              isUploading 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : selectedFile
+              selectedFile
                 ? 'bg-orange-600 hover:bg-orange-700'
                 : 'bg-green-600 hover:bg-green-700'
             }`}
           >
-            {isUploading 
-              ? 'Uploading...' 
-              : selectedFile 
-              ? 'Upload File' 
-              : 'Send File'
-            }
+            {selectedFile ? 'File Selected' : 'Send File'}
           </button>
         </div>
 
