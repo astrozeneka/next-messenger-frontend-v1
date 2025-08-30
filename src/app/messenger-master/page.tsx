@@ -3,11 +3,13 @@
 import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
+import { useMessages } from '../../hooks/useMessages';
 
 export default function MessengerMaster() {
   const { user, isAuthenticated, loading, logout } = useAuth();
   const router = useRouter();
   const [message, setMessage] = useState('');
+  const { messages, isConnected } = useMessages('chat');
 
   const handleMessageSend = async () => {
     if (!message.trim()) return;
@@ -55,8 +57,25 @@ export default function MessengerMaster() {
 
   return (
     <div className="min-h-screen p-8">
-      <div className="max-w-md mx-auto text-center space-y-4">
-        <h1 className="text-3xl font-bold">Hello {user.name}</h1>
+      <div className="max-w-md mx-auto space-y-4">
+        <div className="text-center">
+          <h1 className="text-3xl font-bold">Hello {user.name}</h1>
+          <div className="text-sm text-gray-500">
+            {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+          </div>
+        </div>
+        
+        <div className="bg-gray-100 p-4 rounded-md h-64 overflow-y-auto">
+          {messages.length === 0 ? (
+            <p className="text-gray-500 text-center">No messages yet...</p>
+          ) : (
+            messages.map((msg, index) => (
+              <div key={index} className="mb-2">
+                <span className="font-bold">{msg.username}:</span> {msg.message}
+              </div>
+            ))
+          )}
+        </div>
         
         <div className="flex space-x-2">
           <input
@@ -74,12 +93,14 @@ export default function MessengerMaster() {
           </button>
         </div>
 
-        <button
-          onClick={logout}
-          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
-        >
-          Logout
-        </button>
+        <div className="text-center">
+          <button
+            onClick={logout}
+            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+          >
+            Logout
+          </button>
+        </div>
 
       </div>
     </div>
