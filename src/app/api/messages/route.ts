@@ -17,10 +17,9 @@ export const POST = async (request: Request) => {
         // Broadcast to everyone
         await pusher.trigger(channel, 'new-message', {
             message,
-            username
+            username,
+            timestamp: new Date().toISOString()
         });
-
-        console.log("Hello intercepted");
 
         // Return hello world
         return NextResponse.json(

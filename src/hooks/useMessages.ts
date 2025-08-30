@@ -27,9 +27,9 @@ export const useMessages = (channel: string = 'chat') => {
       setIsConnected(false);
     });
 
-    pusher.connection.bind('error', (err: any) => {
+    pusher.connection.bind('error', () => {
       setIsConnected(false);
-    })
+    });
 
     channelInstance.bind('new-message', (data: Message) => {
         setMessages((prevMessages) => [...prevMessages, data]);
