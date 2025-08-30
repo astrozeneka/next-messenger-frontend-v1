@@ -4,6 +4,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
+import { getPrivateKey } from '../../lib/crypto';
 
 export default function MessengerMaster() {
   const { user, isAuthenticated, loading, logout, token } = useAuth();
@@ -49,6 +50,8 @@ export default function MessengerMaster() {
     email: string;
     public_key: string | null;
   } | null>(null);
+
+  const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   
   useEffect(() => {
     const fetchRemoteUser = async () => {
@@ -75,6 +78,20 @@ export default function MessengerMaster() {
 
     fetchRemoteUser();
   }, [user, token]);
+
+  useEffect(() => {
+    console.log(user); // no public_key provided
+    if (!user?.public_key) return;
+
+    const userPrivateKey = getPrivateKey(user.public_key);
+    if (userPrivateKey) {
+      setEncryptionKey(userPrivateKey);
+      console.log('Private key loaded successfully');
+    } else {
+      console.error('Private key not found in localStorage');
+      router.push('/login');
+    }
+  }, [user, router]);
 
   if (loading) {
     return (
