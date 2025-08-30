@@ -78,4 +78,5 @@ model users {
   created_at        DateTime? @db.Timestamp(0)
   updated_at        DateTime? @db.Timestamp(0)
   google_id         String?   @unique(map: "users_google_id_unique") @db.VarChar(255)
+  public_key        String?   @db.Text
 }

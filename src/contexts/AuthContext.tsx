@@ -1,6 +1,7 @@
 'use client';
 
 import { createContext, useContext, useEffect, useState, ReactNode } from 'react';
+import { generateKeyPair, storePrivateKey } from '../lib/crypto';
 
 interface User {
   id: string;
@@ -111,17 +112,20 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const register = async (name: string, email: string, password: string) => {
     try {
+      const keyPair = await generateKeyPair();
+      
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password }),
+        body: JSON.stringify({ name, email, password, publicKey: keyPair.publicKey }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
+        storePrivateKey(keyPair.privateKey);
         setToken(data.token);
         setRefreshToken(data.refreshToken);
         setUser(data.user);

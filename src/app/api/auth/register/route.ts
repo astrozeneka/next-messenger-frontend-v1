@@ -5,11 +5,11 @@ import { createRefreshToken } from "@/lib/refreshToken";
 
 export async function POST(request: NextRequest) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, publicKey } = await request.json();
 
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !publicKey) {
       return NextResponse.json(
-        { error: 'Name, email and password are required' },
+        { error: 'Name, email, password and publicKey are required' },
         { status: 400 }
       );
     }
@@ -38,7 +38,8 @@ export async function POST(request: NextRequest) {
       data: {
         name,
         email,
-        password: hashedPassword
+        password: hashedPassword,
+        public_key: publicKey
       }
     });
 
