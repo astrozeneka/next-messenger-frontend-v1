@@ -126,7 +126,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const data = await response.json();
 
       if (response.ok) {
-        storePrivateKey(keyPair.privateKey);
+        storePrivateKey(keyPair.publicKey, keyPair.privateKey);
         setToken(data.token);
         setRefreshToken(data.refreshToken);
         setUser(data.user);

@@ -27,10 +27,26 @@ export const generateKeyPair = async (): Promise<KeyPair> => {
   };
 };
 
-export const storePrivateKey = (privateKey: string): void => {
-  localStorage.setItem('privateKey', privateKey);
+const PRIVATE_KEYS_STORAGE_KEY = 'privateKeys';
+
+export const storePrivateKey = (publicKey: string, privateKey: string): void => {
+  const existingKeys = getPrivateKeysMap();
+  existingKeys[publicKey] = privateKey;
+  localStorage.setItem(PRIVATE_KEYS_STORAGE_KEY, JSON.stringify(existingKeys));
 };
 
-export const getPrivateKey = (): string | null => {
-  return localStorage.getItem('privateKey');
+export const getPrivateKey = (publicKey: string): string | null => {
+  const keysMap = getPrivateKeysMap();
+  return keysMap[publicKey] || null;
+};
+
+export const getPrivateKeysMap = (): Record<string, string> => {
+  const stored = localStorage.getItem(PRIVATE_KEYS_STORAGE_KEY);
+  return stored ? JSON.parse(stored) : {};
+};
+
+export const removePrivateKey = (publicKey: string): void => {
+  const existingKeys = getPrivateKeysMap();
+  delete existingKeys[publicKey];
+  localStorage.setItem(PRIVATE_KEYS_STORAGE_KEY, JSON.stringify(existingKeys));
 };

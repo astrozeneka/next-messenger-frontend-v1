@@ -6,7 +6,7 @@ import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 
 export default function MessengerMaster() {
-  const { user, isAuthenticated, loading, logout } = useAuth();
+  const { user, isAuthenticated, loading, logout, token } = useAuth();
   const router = useRouter();
   const [message, setMessage] = useState('');
   const { messages, isConnected } = useMessages('chat');
@@ -42,6 +42,39 @@ export default function MessengerMaster() {
       router.push('/messenger-login');
     }
   }, [isAuthenticated, loading, router]);
+
+  const [remoteUser, setRemoteUser] = useState<{
+    id: string;
+    name: string;
+    email: string;
+    public_key: string | null;
+  } | null>(null);
+  
+  useEffect(() => {
+    const fetchRemoteUser = async () => {
+      if (!user?.email || !token) return;
+
+      try {
+        const response = await fetch(`/api/users/remote?email=${encodeURIComponent(user.email)}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (response.ok) {
+          const remoteUserData = await response.json();
+          setRemoteUser(remoteUserData);
+          console.log("Remote user fetched:", remoteUserData);
+        } else {
+          console.error('Failed to fetch remote user');
+        }
+      } catch (error) {
+        console.error('Error fetching remote user:', error);
+      }
+    };
+
+    fetchRemoteUser();
+  }, [user, token]);
 
   if (loading) {
     return (
