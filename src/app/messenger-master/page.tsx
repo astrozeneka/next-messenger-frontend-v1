@@ -57,6 +57,7 @@ export default function MessengerMaster() {
   const router = useRouter();
   const [message, setMessage] = useState('');
   const { messages, isConnected } = useMessages('chat');
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const handleMessageSend = async () => {
     if (!message.trim()) return;
@@ -90,6 +91,19 @@ export default function MessengerMaster() {
       console.error('Error sending message:', error);
     }
   }
+
+  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      setSelectedFile(file);
+      console.log('File selected:', file);
+    }
+  };
+
+  const handleSendFileClick = () => {
+    const fileInput = document.getElementById('file-input') as HTMLInputElement;
+    fileInput?.click();
+  };
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -196,7 +210,26 @@ export default function MessengerMaster() {
           >
             Send
           </button>
+          <button
+            onClick={handleSendFileClick}
+            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+          >
+            Send File
+          </button>
         </div>
+
+        <input
+          id="file-input"
+          type="file"
+          onChange={handleFileSelect}
+          className="hidden"
+        />
+
+        {selectedFile && (
+          <div className="text-sm text-gray-600">
+            Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+          </div>
+        )}
 
         <div className="text-center">
           <button
