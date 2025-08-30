@@ -58,6 +58,7 @@ export default function MessengerMaster() {
   const [message, setMessage] = useState('');
   const { messages, isConnected } = useMessages('chat');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState(false);
 
   const handleMessageSend = async () => {
     if (!message.trim()) return;
@@ -100,9 +101,65 @@ export default function MessengerMaster() {
     }
   };
 
-  const handleSendFileClick = () => {
-    const fileInput = document.getElementById('file-input') as HTMLInputElement;
-    fileInput?.click();
+  const handleSendFileClick = async () => {
+    console.log(selectedFile);
+    if (!selectedFile) {
+      const fileInput = document.getElementById('file-input') as HTMLInputElement;
+      fileInput?.click();
+      return;
+    }
+
+    setIsUploading(true);
+    
+    try {
+      // Get presigned URL
+      const presignedResponse = await fetch('/api/upload/presigned-url', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          fileName: selectedFile.name,
+          fileType: selectedFile.type,
+          fileSize: selectedFile.size,
+        }),
+      });
+
+      if (!presignedResponse.ok) {
+        throw new Error('Failed to get presigned URL');
+      }
+
+      const { presignedUrl, key } = await presignedResponse.json();
+
+      // Upload file to S3
+      const uploadResponse = await fetch(presignedUrl, {
+        method: 'PUT',
+        body: selectedFile,
+        headers: {
+          'Content-Type': selectedFile.type,
+        },
+      });
+
+      if (!uploadResponse.ok) {
+        throw new Error('Failed to upload file');
+      }
+
+      console.log('File uploaded successfully:', key);
+      
+      // Clear selected file after successful upload
+      setSelectedFile(null);
+      
+      // Reset file input
+      const fileInput = document.getElementById('file-input') as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
+      }
+
+    } catch (error) {
+      console.error('Error uploading file:', error);
+    } finally {
+      setIsUploading(false);
+    }
   };
 
   useEffect(() => {
@@ -212,9 +269,21 @@ export default function MessengerMaster() {
           </button>
           <button
             onClick={handleSendFileClick}
-            className="px-4 py-2 bg-green-600 text-white rounded-md hover:bg-green-700"
+            disabled={isUploading}
+            className={`px-4 py-2 text-white rounded-md ${
+              isUploading 
+                ? 'bg-gray-400 cursor-not-allowed' 
+                : selectedFile
+                ? 'bg-orange-600 hover:bg-orange-700'
+                : 'bg-green-600 hover:bg-green-700'
+            }`}
           >
-            Send File
+            {isUploading 
+              ? 'Uploading...' 
+              : selectedFile 
+              ? 'Upload File' 
+              : 'Send File'
+            }
           </button>
         </div>
 
