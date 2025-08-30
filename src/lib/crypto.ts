@@ -50,3 +50,51 @@ export const removePrivateKey = (publicKey: string): void => {
   delete existingKeys[publicKey];
   localStorage.setItem(PRIVATE_KEYS_STORAGE_KEY, JSON.stringify(existingKeys));
 };
+
+export const encryptMessage = async (message: string, publicKeyBase64: string): Promise<string> => {
+  const publicKeyBuffer = Uint8Array.from(atob(publicKeyBase64), c => c.charCodeAt(0));
+  
+  const publicKey = await window.crypto.subtle.importKey(
+    'spki',
+    publicKeyBuffer,
+    {
+      name: 'RSA-OAEP',
+      hash: 'SHA-256',
+    },
+    false,
+    ['encrypt']
+  );
+
+  const messageBuffer = new TextEncoder().encode(message);
+  const encryptedBuffer = await window.crypto.subtle.encrypt(
+    'RSA-OAEP',
+    publicKey,
+    messageBuffer
+  );
+
+  return btoa(String.fromCharCode.apply(null, Array.from(new Uint8Array(encryptedBuffer))));
+};
+
+export const decryptMessage = async (encryptedMessage: string, privateKeyBase64: string): Promise<string> => {
+  const privateKeyBuffer = Uint8Array.from(atob(privateKeyBase64), c => c.charCodeAt(0));
+  
+  const privateKey = await window.crypto.subtle.importKey(
+    'pkcs8',
+    privateKeyBuffer,
+    {
+      name: 'RSA-OAEP',
+      hash: 'SHA-256',
+    },
+    false,
+    ['decrypt']
+  );
+
+  const encryptedBuffer = Uint8Array.from(atob(encryptedMessage), c => c.charCodeAt(0));
+  const decryptedBuffer = await window.crypto.subtle.decrypt(
+    'RSA-OAEP',
+    privateKey,
+    encryptedBuffer
+  );
+
+  return new TextDecoder().decode(decryptedBuffer);
+};

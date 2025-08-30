@@ -4,7 +4,53 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
-import { getPrivateKey } from '../../lib/crypto';
+import { getPrivateKey, encryptMessage, decryptMessage } from '../../lib/crypto';
+
+interface DecryptedMessageProps {
+  message: { username: string; message: string };
+  encryptionKey: string | null;
+}
+
+function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
+  const [decryptedContent, setDecryptedContent] = useState<string>('');
+  const [isDecrypting, setIsDecrypting] = useState(true);
+
+  useEffect(() => {
+    const decrypt = async () => {
+      if (!encryptionKey) {
+        setDecryptedContent('[Unable to decrypt - private key not loaded]');
+        setIsDecrypting(false);
+        return;
+      }
+
+      try {
+        const decrypted = await decryptMessage(message.message, encryptionKey);
+        setDecryptedContent(decrypted);
+      } catch (error) {
+        console.error('Decryption failed:', error);
+        setDecryptedContent('[Decryption failed]');
+      } finally {
+        setIsDecrypting(false);
+      }
+    };
+
+    decrypt();
+  }, [message.message, encryptionKey]);
+
+  if (isDecrypting) {
+    return (
+      <div className="mb-2">
+        <span className="font-bold">{message.username}:</span> <span className="italic text-gray-500">Decrypting...</span>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mb-2">
+      <span className="font-bold">{message.username}:</span> {decryptedContent}
+    </div>
+  );
+}
 
 export default function MessengerMaster() {
   const { user, isAuthenticated, loading, logout, token } = useAuth();
@@ -15,14 +61,21 @@ export default function MessengerMaster() {
   const handleMessageSend = async () => {
     if (!message.trim()) return;
     
+    if (!remoteUser?.public_key) {
+      console.error('Remote user public key not available');
+      return;
+    }
+    
     try {
+      const encryptedMessage = await encryptMessage(message.trim(), remoteUser.public_key);
+      
       const response = await fetch('/api/messages', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          message: message.trim(),
+          message: encryptedMessage,
           username: user?.name,
         }),
       });
@@ -120,9 +173,11 @@ export default function MessengerMaster() {
             <p className="text-gray-500 text-center">No messages yet...</p>
           ) : (
             messages.map((msg, index) => (
-              <div key={index} className="mb-2">
-                <span className="font-bold">{msg.username}:</span> {msg.message}
-              </div>
+              <DecryptedMessage 
+                key={index} 
+                message={msg} 
+                encryptionKey={encryptionKey} 
+              />
             ))
           )}
         </div>
