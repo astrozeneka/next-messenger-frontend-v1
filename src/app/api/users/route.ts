@@ -1,10 +1,19 @@
-import { NextRequest, NextResponse } from "next/server";
+import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
+import { withAuth, AuthenticatedRequest } from "@/lib/authMiddleware";
 
-export async function GET() {
+export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
-    const users = await prisma.users.findMany();
-    // [{"id":"1","name":"Admin","email":"admin@localhost.com","email_verified_at":null,"password":"","remember_token":null,"created_at":null,"updated_at":null,"google_id":null}]
+    const users = await prisma.users.findMany({
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        created_at: true,
+        updated_at: true
+      }
+    });
+    
     const serializedUsers = users.map(user => ({
       ...user,
       id: user.id.toString()
@@ -13,9 +22,9 @@ export async function GET() {
   } catch (error) {
     return NextResponse.json({ error: `${error}` }, { status: 500 });
   }
-}
+});
 
-export async function POST(request: NextRequest) {
+export const POST = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const { name, email } = await request.json();
     
@@ -37,4 +46,4 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     return NextResponse.json({ error: `${error}` }, { status: 500 });
   }
-}
+});
