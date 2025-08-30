@@ -106,7 +106,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } else {
         return { success: false, error: data.error };
       }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Network error' };
     }
   };
@@ -136,7 +136,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } else {
         return { success: false, error: data.error };
       }
-    } catch (error) {
+    } catch {
       return { success: false, error: 'Network error' };
     }
   };

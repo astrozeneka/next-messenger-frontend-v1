@@ -2,10 +2,15 @@
 
 import { useForm } from 'react-hook-form';
 
-export default function ClientForm() {
-  const { register, handleSubmit } = useForm();
+interface FormData {
+  name: string;
+  email: string;
+}
 
-  const onSubmit = async (data: any) => {
+export default function ClientForm() {
+  const { register, handleSubmit } = useForm<FormData>();
+
+  const onSubmit = async (data: FormData) => {
     const response = await fetch('/api/users', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },

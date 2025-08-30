@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthenticatedRequest } from "@/lib/authMiddleware";
 
-export const GET = withAuth(async (request: AuthenticatedRequest) => {
+export const GET = withAuth(async () => {
   try {
     const users = await prisma.users.findMany({
       select: {

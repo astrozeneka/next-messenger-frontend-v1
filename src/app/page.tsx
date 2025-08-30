@@ -1,13 +1,9 @@
 "use client"
 
-import Image from "next/image";
 import Counter from "./components/counter";
 import ClientForm from "./components/client-form";
-import { useEffect, useState } from "react";
-import { getPusherClient } from "@/lib/pusher";
 
 export default function Home() {
-  const [connectionState, setConnectionState] = useState<string | null>("Connecting ...");
 
   /*useEffect(() => {
     const pusher = getPusherClient();

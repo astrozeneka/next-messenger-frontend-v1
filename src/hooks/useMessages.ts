@@ -1,6 +1,5 @@
 import { useEffect, useState } from 'react';
 import { getPusherClient } from '../lib/pusher';
-import { set } from 'react-hook-form';
 
 interface Message {
   message: string;
