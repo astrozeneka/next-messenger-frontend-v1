@@ -83,6 +83,41 @@ export default function MessengerMaster() {
     }
   }, [user, router]);
 
+  // Mark all messages from remote users as delivered when user enters messenger-master
+  useEffect(() => {
+    if (!token || !conversations || conversations.length === 0) return;
+
+    const markAllMessagesAsDelivered = async () => {
+      try {
+        // Mark messages as delivered for each conversation
+        for (const conversation of conversations) {
+          const response = await fetch('/api/msgs/delivered', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              conversation_id: conversation.conversation_id
+              // No message_ids provided, so it will mark all messages from remote users
+            })
+          });
+
+          if (response.ok) {
+            const result = await response.json();
+            console.log(`Marked ${result.updated_count} messages as delivered for conversation ${conversation.conversation_id}`);
+          } else {
+            console.error(`Error marking messages as delivered for conversation ${conversation.conversation_id}:`, response.statusText);
+          }
+        }
+      } catch (error) {
+        console.error('Error marking messages as delivered:', error);
+      }
+    };
+
+    markAllMessagesAsDelivered();
+  }, [token, conversations]);
+
 
   if (loading) {
     return (
