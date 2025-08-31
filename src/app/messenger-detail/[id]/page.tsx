@@ -128,7 +128,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
 
   // Load messages when the page loads
   useEffect(() => {
-    if (!token || !conversation_id) return;
+    if (!token || !conversation_id || !user?.id) return;
 
     const loadMessages = async () => {
       try {
@@ -151,6 +151,36 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
           
           // Initialize messages using the hook's method
           initializeMessages(formattedMessages);
+
+          // Mark messages as read (only for messages not sent by current user)
+          const messagesToMarkAsRead = formattedMessages
+            .filter((msg: Msg) => msg.sender_id !== user.id && (msg.status === 'sent' || msg.status === 'delivered'))
+            .map((msg: Msg) => msg.id);
+
+          if (messagesToMarkAsRead.length > 0) {
+            try {
+              const readResponse = await fetch('/api/msgs/read', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                  message_ids: messagesToMarkAsRead,
+                  conversation_id: conversation_id
+                })
+              });
+
+              if (readResponse.ok) {
+                const readResult = await readResponse.json();
+                console.log(`Marked ${readResult.updated_count} messages as read`);
+              } else {
+                console.error('Error marking messages as read:', readResponse.statusText);
+              }
+            } catch (error) {
+              console.error('Error marking messages as read:', error);
+            }
+          }
         } else {
           console.error('Error loading messages:', response.statusText);
         }
@@ -160,7 +190,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
     };
 
     loadMessages();
-  }, [token, conversation_id, initializeMessages]);
+  }, [token, conversation_id, initializeMessages, user?.id]);
 
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;

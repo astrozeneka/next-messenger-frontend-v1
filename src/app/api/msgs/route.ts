@@ -129,68 +129,8 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             }
         });
 
-        // Update messages status from 'sent' to 'delivered' when fetched
-        const updatedMessages = await prisma.msgs.updateMany({
-            where: {
-                conversation_id: conversationIdNum,
-                sender_id: {
-                    not: currentUser!.id
-                },
-                status: 'sent'  // Only update messages that are currently 'sent'
-            },
-            data: {
-                status: 'delivered'
-            }
-        });
-
-        console.log(`Updated ${updatedMessages.count} messages to 'delivered' status`);
-
-        // Get conversation members to notify about status updates
-        const conversation_members = await prisma.conversation_members.findMany({
-            where: {
-                conversation_id: conversationIdNum
-            }
-        });
-
-        // If messages were updated to 'delivered', send Pusher notifications
-        if (updatedMessages.count > 0) {
-            // Get the updated messages to send in notifications
-            const updatedMessagesList = await prisma.msgs.findMany({
-                where: {
-                    conversation_id: conversationIdNum,
-                    sender_id: {
-                        not: currentUser!.id
-                    },
-                    status: 'delivered'
-                },
-                orderBy: {
-                    created_at: 'asc'
-                }
-            });
-
-            // Send notification for each updated message
-            for (const msg of updatedMessagesList) {
-                // Broadcast to the conversation channel
-                console.log("Trigger 'message-updated' to", `conversation.${conversationIdNum}`);
-                await pusher.trigger(`conversation.${conversationIdNum}`, 'message-updated', {
-                    ...msg,
-                    id: msg.id.toString(),
-                    conversation_id: msg.conversation_id.toString(),
-                    sender_id: msg.sender_id.toString()
-                });
-
-                // Notify each conversation member (TODO LATER)
-                /*for (const cm of conversation_members || []) {
-                    console.log("Trigger 'conversation updated' to", `user.${cm.user_id}.conversations`);
-                    await pusher.trigger(`user.${cm.user_id}.conversations`, 'conversation-updated', {
-                        ...msg,
-                        id: msg.id.toString(),
-                        conversation_id: msg.conversation_id.toString(),
-                        sender_id: msg.sender_id.toString()
-                    });
-                }*/
-            }
-        }
+        // Note: Messages are no longer automatically marked as delivered when fetched
+        // They will be marked as read when actually viewed in the detail view
 
         return NextResponse.json(messages.map((msg: any) => ({
             ...msg,
