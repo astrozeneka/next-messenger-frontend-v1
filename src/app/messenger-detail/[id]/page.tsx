@@ -34,6 +34,7 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
       }
 
       try {
+        console.log(message);
         const decrypted = await decryptMessage(message.content, encryptionKey);
         setDecryptedContent(decrypted);
       } catch (error) {
@@ -144,6 +145,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
             sender_id: msg.sender_id.toString()
           })));
           console.log('Messages loaded:', fetchedMessages.length);
+          console.log(fetchedMessages);
         } else {
           console.error('Error loading messages:', response.statusText);
         }

@@ -115,6 +115,55 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         });
 
         console.log(`Updated ${updatedMessages.count} messages to 'delivered' status`);
+
+        // Get conversation members to notify about status updates
+        const conversation_members = await prisma.conversation_members.findMany({
+            where: {
+                conversation_id: conversationIdNum
+            }
+        });
+
+        // If messages were updated to 'delivered', send Pusher notifications
+        if (updatedMessages.count > 0) {
+            // Get the updated messages to send in notifications
+            const updatedMessagesList = await prisma.msgs.findMany({
+                where: {
+                    conversation_id: conversationIdNum,
+                    sender_id: {
+                        not: currentUser!.id
+                    },
+                    status: 'delivered'
+                },
+                orderBy: {
+                    created_at: 'asc'
+                }
+            });
+            console.log("=======>", updatedMessagesList);
+
+            // Send notification for each updated message
+            for (const msg of updatedMessagesList) {
+                // Broadcast to the conversation channel
+                console.log("Trigger 'message-sent' to", `conversation.${conversationIdNum}`);
+                await pusher.trigger(`conversation.${conversationIdNum}`, 'message-sent', {
+                    ...msg,
+                    id: msg.id.toString(),
+                    conversation_id: msg.conversation_id.toString(),
+                    sender_id: msg.sender_id.toString()
+                });
+
+                // Notify each conversation member (TODO LATER)
+                /*for (const cm of conversation_members || []) {
+                    console.log("Trigger 'conversation updated' to", `user.${cm.user_id}.conversations`);
+                    await pusher.trigger(`user.${cm.user_id}.conversations`, 'conversation-updated', {
+                        ...msg,
+                        id: msg.id.toString(),
+                        conversation_id: msg.conversation_id.toString(),
+                        sender_id: msg.sender_id.toString()
+                    });
+                }*/
+            }
+        }
+
         console.log("====>", messages);
         return NextResponse.json(messages.map((msg: any) => ({
             ...msg,

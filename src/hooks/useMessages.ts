@@ -35,6 +35,7 @@ export const useMessages = (channel: string = 'chat') => {
     });*/
 
     channelInstance.bind('message-sent', (data: Message) => {
+      console.log("Hello, receive message-sent", data);
       setMessages((prevMessages) => [...prevMessages, data]);
     });
 
