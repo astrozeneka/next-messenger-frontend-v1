@@ -109,10 +109,13 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
 
   // Load encryption key from localStorage
   useEffect(() => {
+    console.log("Remote User", remoteUser);
+    console.log("Current user", user);
     if (!remoteUser) return;
     if (!user?.public_key) return;
 
     const userPrivateKey = getPrivateKey(user.public_key);
+    console.log("User Private Key", userPrivateKey);
     if (userPrivateKey) {
       setEncryptionKey(userPrivateKey);
       console.log('Private key loaded successfully');
