@@ -163,7 +163,6 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             }
         }
 
-        console.log("====>", messages);
         return NextResponse.json(messages.map((msg: any) => ({
             ...msg,
             id: msg.id.toString(),

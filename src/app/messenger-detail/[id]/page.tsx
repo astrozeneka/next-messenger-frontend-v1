@@ -8,8 +8,8 @@ import { useEffect, useState } from "react";
 // TODO, refactor in a separate interface file
 export interface Msg {
   id: string
-  created_at: any
-  updated_at: any
+  created_at: string | Date
+  updated_at: string | Date
   conversation_id: string
   sender_id: string
   content: string
@@ -47,7 +47,7 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
     };
 
     decrypt();
-  }, [message.content, encryptionKey]);
+  }, [message, encryptionKey]);
 
   if (isDecrypting) {
     return (
@@ -66,9 +66,13 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
 
 export default function MessengerDetail({ params }: { params: { id: string } }) {
   const conversation_id = params.id;
-  const { messages, isConnected, initializeMessages } = useMessages(`conversation.${conversation_id}`);
-
   const { token, user } = useAuth();
+  const { messages, isConnected, initializeMessages } = useMessages(
+    `conversation.${conversation_id}`,
+    user?.id,
+    token || undefined,
+    conversation_id
+  );
 
   // State variables
   const [message, setMessage] = useState('');
@@ -138,7 +142,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
 
         if (response.ok) {
           const fetchedMessages = await response.json();
-          const formattedMessages = fetchedMessages.map((msg: any) => ({
+          const formattedMessages = fetchedMessages.map((msg: Msg) => ({
             ...msg,
             id: msg.id.toString(),
             conversation_id: msg.conversation_id.toString(),
