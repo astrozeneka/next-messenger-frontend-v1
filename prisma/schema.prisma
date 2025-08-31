@@ -69,14 +69,75 @@ model personal_access_tokens {
 }
 
 model users {
-  id                BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
-  name              String    @db.VarChar(255)
-  email             String    @unique(map: "users_email_unique") @db.VarChar(255)
-  email_verified_at DateTime? @db.Timestamp(0)
-  password          String    @db.VarChar(255)
-  remember_token    String?   @db.VarChar(100)
-  created_at        DateTime? @db.Timestamp(0)
-  updated_at        DateTime? @db.Timestamp(0)
-  google_id         String?   @unique(map: "users_google_id_unique") @db.VarChar(255)
-  public_key        String?   @db.Text
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  name                 String                 @db.VarChar(255)
+  email                String                 @unique(map: "users_email_unique") @db.VarChar(255)
+  email_verified_at    DateTime?              @db.Timestamp(0)
+  password             String                 @db.VarChar(255)
+  remember_token       String?                @db.VarChar(100)
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  google_id            String?                @unique(map: "users_google_id_unique") @db.VarChar(255)
+  public_key           String?                @db.Text
+  conversation_members conversation_members[]
+  msgs                 msgs[]
+}
+
+model conversation_members {
+  id              BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at      DateTime?     @db.Timestamp(0)
+  updated_at      DateTime?     @db.Timestamp(0)
+  conversation_id BigInt        @db.UnsignedBigInt
+  user_id         BigInt        @db.UnsignedBigInt
+  joined_at       DateTime      @default(now()) @db.Timestamp(0)
+  last_seen_at    DateTime?     @db.Timestamp(0)
+  unread_count    Int           @default(0)
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "conversation_members_conversation_id_foreign")
+  users           users         @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "conversation_members_user_id_foreign")
+
+  @@unique([conversation_id, user_id], map: "conversation_members_conversation_id_user_id_unique")
+  @@index([last_seen_at], map: "conversation_members_last_seen_at_index")
+  @@index([user_id], map: "conversation_members_user_id_foreign")
+}
+
+model conversations {
+  id                   BigInt                 @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at           DateTime?              @db.Timestamp(0)
+  updated_at           DateTime?              @db.Timestamp(0)
+  type                 conversations_type     @default(private)
+  conversation_members conversation_members[]
+  msgs                 msgs[]
+}
+
+model msgs {
+  id              BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  created_at      DateTime?     @db.Timestamp(0)
+  updated_at      DateTime?     @db.Timestamp(0)
+  conversation_id BigInt        @db.UnsignedBigInt
+  sender_id       BigInt        @db.UnsignedBigInt
+  content         String?       @db.Text
+  type            msgs_type     @default(text)
+  status          msgs_status   @default(sent)
+  conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "msgs_conversation_id_foreign")
+  users           users         @relation(fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "msgs_sender_id_foreign")
+
+  @@index([conversation_id, created_at], map: "msgs_conversation_id_created_at_index")
+  @@index([sender_id], map: "msgs_sender_id_foreign")
+}
+
+enum conversations_type {
+  private
+  group
+}
+
+enum msgs_type {
+  text
+  image
+  file
+}
+
+enum msgs_status {
+  sent
+  delivered
+  read
 }
