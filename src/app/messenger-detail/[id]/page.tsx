@@ -34,7 +34,6 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
       }
 
       try {
-        console.log("Message", message.content) // This is undefined.
         const decrypted = await decryptMessage(message.content, encryptionKey);
         setDecryptedContent(decrypted);
       } catch (error) {
@@ -58,7 +57,7 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
 
   return (
     <div className="mb-2">
-      <span className="font-bold">REMOTE:</span> {decryptedContent}
+      <span className="font-bold">REMOTE:</span> {decryptedContent} [{message.status}]
     </div>
   );
 }
@@ -80,6 +79,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
     public_key: string | null;
   } | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
+  const [loadedMessages, setLoadedMessages] = useState<Msg[]>([]);
 
   // Get the remote user list
   useEffect(()=>{
@@ -109,8 +109,6 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
 
   // Load encryption key from localStorage
   useEffect(() => {
-    console.log("Remote User", remoteUser);
-    console.log("Current user", user);
     if (!remoteUser) return;
     if (!user?.public_key) return;
 
@@ -123,6 +121,39 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
       console.error('Private key not found in localStorage');
     }
   }, [user, remoteUser]);
+
+  // Load messages when the page loads
+  useEffect(() => {
+    if (!token || !conversation_id) return;
+
+    const loadMessages = async () => {
+      try {
+        const response = await fetch(`/api/msgs?conversation_id=${conversation_id}`, {
+          headers: {
+            Authorization: `Bearer ${token}`,
+            'Accept': 'application/json'
+          }
+        });
+
+        if (response.ok) {
+          const fetchedMessages = await response.json();
+          setLoadedMessages(fetchedMessages.map((msg: any) => ({
+            ...msg,
+            id: msg.id.toString(),
+            conversation_id: msg.conversation_id.toString(),
+            sender_id: msg.sender_id.toString()
+          })));
+          console.log('Messages loaded:', fetchedMessages.length);
+        } else {
+          console.error('Error loading messages:', response.statusText);
+        }
+      } catch (error) {
+        console.error('Error loading messages:', error);
+      }
+    };
+
+    loadMessages();
+  }, [token, conversation_id]);
 
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;
@@ -243,18 +274,28 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
         </div>
 
         <div className="bg-gray-100 p-4 rounded-md h-64 overflow-y-auto">
-          {messages.length === 0 ? (
+          {/* Display loaded messages */}
+          {loadedMessages.map((msg) => (
+            <div key={`loaded-${msg.id}`}>
+              <DecryptedMessage
+                message={msg}
+                encryptionKey={encryptionKey}
+              />
+            </div>
+          ))}
+          
+          {/* Display real-time messages (these have different structure from Pusher) */}
+          {messages.map((msg, index) => (
+            <div key={`realtime-${index}`}>
+              <DecryptedMessage
+                message={msg as unknown as Msg}
+                encryptionKey={encryptionKey}
+              />
+            </div>
+          ))}
+          
+          {loadedMessages.length === 0 && messages.length === 0 && (
             <p className="text-gray-500 text-center">No messages yet...</p>
-          ) : (
-            messages.map((msg, index) => (
-              <div key={index}>
-                <DecryptedMessage
-                  key={index}
-                  message={msg as unknown as Msg}
-                  encryptionKey={encryptionKey}
-                />
-              </div>
-            ))
           )}
         </div>
 

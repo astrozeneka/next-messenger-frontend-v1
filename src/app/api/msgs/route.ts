@@ -66,3 +66,51 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         );
     }
 })
+
+export const GET = withAuth(async (request: AuthenticatedRequest) => {
+    try {
+        const url = new URL(request.url);
+        const conversation_id = url.searchParams.get('conversation_id');
+        const currentUser = request.user;
+
+        // Validate input
+        if (!conversation_id) {
+            return NextResponse.json(
+                { error: 'conversation_id is required' },
+                { status: 400 }
+            );
+        }
+
+        // Convert conversation_id to number for consistency
+        const conversationIdNum = parseInt(conversation_id);
+        if (isNaN(conversationIdNum)) {
+            return NextResponse.json(
+                { error: 'Invalid conversation_id' },
+                { status: 400 }
+            );
+        }
+
+        // Fetch messages for the conversation
+        const messages = await prisma.msgs.findMany({
+            where: {
+                conversation_id: conversationIdNum
+            },
+            orderBy: {
+                created_at: 'asc'
+            }
+        });
+        console.log("====>", messages);
+        return NextResponse.json(messages.map(msg => ({
+            ...msg,
+            id: msg.id.toString(),
+            conversation_id: msg.conversation_id.toString(),
+            sender_id: msg.sender_id.toString()
+        })));
+    } catch (error) {
+        console.error('Error fetching messages:', error);
+        return NextResponse.json(
+            { error: 'Internal Server Error' },
+            { status: 500 }
+        );
+    }
+})
