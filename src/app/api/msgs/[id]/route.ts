@@ -55,6 +55,47 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             sender_id: updatedMessage.sender_id.toString()
         });
 
+        // Check if message is the last of the conversation
+        const messageAfter = await prisma.msgs.findFirst({
+            where: {
+                conversation_id: updatedMessage.conversation_id,
+                id: {
+                    gt: updatedMessage.id
+                }
+            }
+        });
+        const isLastMessage = !messageAfter;
+
+        if (isLastMessage) {
+            // Fetch all conversation members
+            const conversationMembers = await prisma.conversation_members.findMany({
+                where: { 
+                    conversation_id: updatedMessage.conversation_id,
+                    user_id: {
+                        not: currentUser!.id
+                    }
+                }
+            }); // Expected to fetch only one message since this a private messaging
+            let conversationId = conversationMembers[0]?.conversation_id;
+            const conversation = await prisma.conversations.findUnique({
+                where: { id: conversationId }
+            });
+            const updatePayload = {
+                ...conversation,
+                id: updatedMessage.id.toString(),
+                conversation_id: conversation.id.toString(),
+                sender_id: updatedMessage.sender_id.toString(),
+                latestMessage: {
+                    id: updatedMessage.id.toString(),
+                    content: updatedMessage.content,
+                    created_at: updatedMessage.created_at,
+                    sender_id: updatedMessage.sender_id.toString()
+                }
+            }
+            await pusher.trigger(`user.${conversationMembers[0]?.user_id}.conversations`, 'conversation-updated', updatePayload);
+        }
+
+
         return NextResponse.json({
             ...updatedMessage,
             id: updatedMessage.id.toString(),

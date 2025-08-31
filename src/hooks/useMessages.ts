@@ -103,14 +103,12 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
     });
 
     channelInstance.bind('message-updated', (data: Msg) => {
-      console.log("Message update ===>", data);
       // For updated messages, check if read acknowledgment is needed
       addOrUpdateMessage(data, true);
     });
 
     // Listen to message status updates (from read acknowledgments)
     channelInstance.bind('message-status-updated', (data: Msg) => {
-      console.log("Message status update ===>", data);
       // For status updates, don't trigger read acknowledgment to avoid loops
       addOrUpdateMessage(data, false);
     });
