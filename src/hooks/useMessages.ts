@@ -19,14 +19,14 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
-  // Function to mark messages as delivered
-  const markMessagesAsDelivered = useCallback(async (messagesToMark: Msg[]) => {
+  // Function to mark messages as read
+  const markMessagesAsRead = useCallback(async (messagesToMark: Msg[]) => {
     if (!currentUserId || !token || !conversationId || messagesToMark.length === 0) return;
 
     const messageIds = messagesToMark.map(msg => msg.id);
     
     try {
-      const response = await fetch('/api/msgs/delivered', {
+      const response = await fetch('/api/msgs/read', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -39,17 +39,17 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
       });
 
       if (!response.ok) {
-        console.error('Failed to mark messages as delivered:', response.statusText);
+        console.error('Failed to mark messages as read:', response.statusText);
       } else {
         const result = await response.json();
-        console.log(`Successfully marked ${result.updated_count} messages as delivered`);
+        console.log(`Successfully marked ${result.updated_count} messages as read`);
       }
     } catch (error) {
-      console.error('Error marking messages as delivered:', error);
+      console.error('Error marking messages as read:', error);
     }
   }, [currentUserId, token, conversationId]);
 
-  const addOrUpdateMessage = useCallback((newMessage: Msg, shouldCheckDelivery = false) => {
+  const addOrUpdateMessage = useCallback((newMessage: Msg, shouldCheckRead = false) => {
     setMessages((prevMessages) => {
       const existingIndex = prevMessages.findIndex(msg => msg.id === newMessage.id);
       
@@ -68,17 +68,17 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
         new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
       );
 
-      // If this is a new message from someone else and it's marked as 'sent', mark it as delivered
-      if (shouldCheckDelivery && currentUserId && newMessage.sender_id !== currentUserId && newMessage.status === 'sent') {
+      // If this is a new message from someone else and it's marked as 'sent' or 'delivered', mark it as read
+      if (shouldCheckRead && currentUserId && newMessage.sender_id !== currentUserId && (newMessage.status === 'sent' || newMessage.status === 'delivered')) {
         // Use setTimeout to avoid state update during render
         setTimeout(() => {
-          markMessagesAsDelivered([newMessage]);
+          markMessagesAsRead([newMessage]);
         }, 0);
       }
 
       return sortedMessages;
     });
-  }, [currentUserId, markMessagesAsDelivered]);
+  }, [currentUserId, markMessagesAsRead]);
 
   useEffect(() => {
     const pusher = getPusherClient();
@@ -98,20 +98,20 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
 
     // Listen to message events
     channelInstance.bind('message-sent', (data: Msg) => {
-      // For real-time messages, check if delivery acknowledgment is needed
+      // For real-time messages, check if read acknowledgment is needed
       addOrUpdateMessage(data, true);
     });
 
     channelInstance.bind('message-updated', (data: Msg) => {
       console.log("Message update ===>", data);
-      // For updated messages, check if delivery acknowledgment is needed
+      // For updated messages, check if read acknowledgment is needed
       addOrUpdateMessage(data, true);
     });
 
-    // Listen to message status updates (from delivery acknowledgments)
+    // Listen to message status updates (from read acknowledgments)
     channelInstance.bind('message-status-updated', (data: Msg) => {
       console.log("Message status update ===>", data);
-      // For status updates, don't trigger delivery acknowledgment to avoid loops
+      // For status updates, don't trigger read acknowledgment to avoid loops
       addOrUpdateMessage(data, false);
     });
 
@@ -130,20 +130,20 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
     
     setMessages(sortedMessages);
 
-    // Mark messages as delivered if they are from other users and still in 'sent' status
+    // Mark messages as read if they are from other users and still in 'sent' or 'delivered' status
     if (currentUserId) {
-      const messagesToMarkDelivered = sortedMessages.filter(
-        msg => msg.sender_id !== currentUserId && msg.status === 'sent'
+      const messagesToMarkAsRead = sortedMessages.filter(
+        msg => msg.sender_id !== currentUserId && (msg.status === 'sent' || msg.status === 'delivered')
       );
       
-      if (messagesToMarkDelivered.length > 0) {
+      if (messagesToMarkAsRead.length > 0) {
         // Use setTimeout to avoid calling async function during state initialization
         setTimeout(() => {
-          markMessagesAsDelivered(messagesToMarkDelivered);
+          markMessagesAsRead(messagesToMarkAsRead);
         }, 0);
       }
     }
-  }, [currentUserId, markMessagesAsDelivered]);
+  }, [currentUserId, markMessagesAsRead]);
 
   return { messages, isConnected, addOrUpdateMessage, initializeMessages };
 };
