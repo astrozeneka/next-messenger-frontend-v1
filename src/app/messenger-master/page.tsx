@@ -71,7 +71,7 @@ export default function MessengerMaster() {
   const { user, isAuthenticated, loading, logout, token } = useAuth();
   const router = useRouter();
   const { isConnected } = useMessages('chat');
-  const { conversations, isLoading } = useConversations(user?.id, token || undefined);
+  const { conversations, isLoading, updateUnreadCount } = useConversations(user?.id, token || undefined);
 
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
@@ -158,6 +158,9 @@ export default function MessengerMaster() {
   }
 
   const handleConversationClick = (conversationId: string) => {
+    // Reset unread count when conversation is clicked
+    updateUnreadCount(conversationId, 0);
+    
     if (isMobile) {
       router.push(`/messenger-detail/${conversationId}`);
     } else {

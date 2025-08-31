@@ -82,7 +82,6 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 unread_count: unreadCount
             };
 
-            console.log(updatePayload);
             await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', updatePayload);
         }
         

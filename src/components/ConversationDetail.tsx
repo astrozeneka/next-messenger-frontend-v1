@@ -172,7 +172,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
                 console.log(`Marked ${readResult.updated_count} messages as read`);
                 
                 if (readResult.updated_count > 0) {
-                  // updateUnreadCount(conversationId, 0);
+                  // Messages marked as read - unread count will be reset by master component
                 }
               } else {
                 console.error('Error marking messages as read:', readResponse.statusText);
