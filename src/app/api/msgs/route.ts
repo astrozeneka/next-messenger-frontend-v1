@@ -18,7 +18,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         }
 
         // Save the message as an entity
-        let entity = await prisma.msgs.create({
+        const entity = await prisma.msgs.create({
             data: {
                 conversation_id,
                 sender_id: currentUser!.id,
