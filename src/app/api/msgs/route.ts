@@ -99,12 +99,29 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
                 created_at: 'asc'
             }
         });
+
+        // Update messages status from 'sent' to 'delivered' when fetched
+        const updatedMessages = await prisma.msgs.updateMany({
+            where: {
+                conversation_id: conversationIdNum,
+                sender_id: {
+                    not: currentUser!.id
+                },
+                status: 'sent'  // Only update messages that are currently 'sent'
+            },
+            data: {
+                status: 'delivered'
+            }
+        });
+
+        console.log(`Updated ${updatedMessages.count} messages to 'delivered' status`);
         console.log("====>", messages);
-        return NextResponse.json(messages.map(msg => ({
+        return NextResponse.json(messages.map((msg: any) => ({
             ...msg,
             id: msg.id.toString(),
             conversation_id: msg.conversation_id.toString(),
-            sender_id: msg.sender_id.toString()
+            sender_id: msg.sender_id.toString(),
+            status: msg.status
         })));
     } catch (error) {
         console.error('Error fetching messages:', error);
