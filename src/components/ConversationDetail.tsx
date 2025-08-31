@@ -2,7 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
-import { useConversations } from "@/hooks/useConversations";
+// import { useConversations } from "@/hooks/useConversations";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
 import { useEffect, useState } from "react";
 
@@ -75,7 +75,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     token || undefined,
     conversationId
   );
-  const { updateUnreadCount } = useConversations(user?.id, token || undefined);
+  //const { updateUnreadCount } = useConversations(user?.id, token || undefined);
 
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
@@ -172,7 +172,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
                 console.log(`Marked ${readResult.updated_count} messages as read`);
                 
                 if (readResult.updated_count > 0) {
-                  updateUnreadCount(conversationId, 0);
+                  // updateUnreadCount(conversationId, 0);
                 }
               } else {
                 console.error('Error marking messages as read:', readResponse.statusText);
@@ -190,7 +190,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     };
 
     loadMessages();
-  }, [token, conversationId, initializeMessages, user?.id, updateUnreadCount]);
+  }, [token, conversationId, initializeMessages, user?.id/*, updateUnreadCount*/]);
 
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;
