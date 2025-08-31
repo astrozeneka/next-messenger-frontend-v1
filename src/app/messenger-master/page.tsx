@@ -7,6 +7,7 @@ import { useMessages } from '../../hooks/useMessages';
 import { useConversations } from '../../hooks/useConversations';
 import { getPrivateKey, decryptMessage } from '../../lib/crypto';
 import { Msg } from '../messenger-detail/[id]/page';
+import ConversationDetail from '../../components/ConversationDetail';
 
 
 interface DecryptedLatestMessageProps {
@@ -53,19 +54,44 @@ function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessa
   return <span className="text-sm text-gray-500">{decryptedContent}</span>;
 }
 
+function ConversationPlaceholder() {
+  return (
+    <div className="flex flex-1 items-center justify-center bg-gray-50">
+      <div className="text-center text-gray-500 max-w-md px-6">
+        <div className="text-8xl mb-6 opacity-50">💬</div>
+        <h2 className="text-3xl font-semibold mb-4 text-gray-700">Welcome to Messenger</h2>
+        <p className="text-lg mb-2">Select a conversation from the list to start messaging</p>
+        <p className="text-sm text-gray-400">Your conversations will appear here with end-to-end encryption</p>
+      </div>
+    </div>
+  );
+}
+
 export default function MessengerMaster() {
   const { user, isAuthenticated, loading, logout, token } = useAuth();
   const router = useRouter();
   const { isConnected } = useMessages('chat');
-  const { conversations, isLoading, refreshConversations } = useConversations(user?.id, token);
+  const { conversations, isLoading } = useConversations(user?.id, token || undefined);
 
-
+  const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
+  const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
       router.push('/messenger-login');
     }
   }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    const checkIfMobile = () => {
+      setIsMobile(window.innerWidth < 768);
+    };
+    
+    checkIfMobile();
+    window.addEventListener('resize', checkIfMobile);
+    
+    return () => window.removeEventListener('resize', checkIfMobile);
+  }, []);
 
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
 
@@ -131,61 +157,85 @@ export default function MessengerMaster() {
     return null;
   }
 
+  const handleConversationClick = (conversationId: string) => {
+    if (isMobile) {
+      router.push(`/messenger-detail/${conversationId}`);
+    } else {
+      setSelectedConversationId(conversationId);
+    }
+  };
+
   return (
-    <div className="min-h-screen p-8">
-      <div className="max-w-md mx-auto space-y-4">
-        <div className="text-center">
-          <h1 className="text-3xl font-bold">Hello {user.name}</h1>
-          <div className="text-sm text-gray-500">
-            {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
+    <div className="min-h-screen flex">
+      {/* Conversations List - Left Column */}
+      <div className="w-full md:w-80 flex flex-col bg-white border-r border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+          <h1 className="text-2xl font-bold">Hello {user.name}</h1>
+          <div className="text-sm text-gray-500 flex gap-4">
+            <span>{isConnected ? '🟢 Connected' : '🔴 Disconnected'}</span>
+            {isLoading && <span className="text-gray-400">Loading...</span>}
           </div>
-          {isLoading && <div className="text-sm text-gray-400">Loading conversations...</div>}
         </div>
 
-        {conversations.length > 0 && (
-          <div className="bg-gray-100 p-4 rounded-md">
-            <h2 className="text-lg font-semibold">Conversations</h2>
-            <ul className="space-y-2">
+        <div className="flex-1 overflow-y-auto">
+          {conversations.length > 0 ? (
+            <div className="space-y-1">
               {conversations.map((conversation) => (
-                <li 
-                  key={conversation.id} 
-                  className="flex flex-col p-3 rounded cursor-pointer hover:bg-gray-200 transition-colors"
-                  onClick={() => router.push(`/messenger-detail/${conversation.conversation_id}`)}
+                <div
+                  key={conversation.id}
+                  className={`flex flex-col p-4 cursor-pointer hover:bg-gray-100 transition-colors border-b border-gray-100 ${
+                    selectedConversationId === conversation.conversation_id ? 'bg-blue-50 border-blue-200' : ''
+                  }`}
+                  onClick={() => handleConversationClick(conversation.conversation_id)}
                 >
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-2">
-                      <span className="font-medium">{conversation.name} (#C{conversation.conversation_id})</span>
+                      <span className="font-medium text-gray-900">{conversation.name}</span>
                       {conversation.unread_count > 0 && (
                         <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center font-bold">
                           {conversation.unread_count}
                         </span>
                       )}
                     </div>
-                    <span className="text-xs text-gray-400">{conversation.email}</span>
                   </div>
+                  <div className="text-xs text-gray-500 mt-1">{conversation.email}</div>
                   <div className="mt-1">
                     <DecryptedLatestMessage 
                       message={conversation.latest_message} 
                       encryptionKey={encryptionKey} 
                     />
                   </div>
-                </li>
+                </div>
               ))}
-            </ul>
-          </div>
-        )}
+            </div>
+          ) : (
+            <div className="p-4 text-center text-gray-500">
+              <div className="text-4xl mb-2">💬</div>
+              <p>No conversations yet</p>
+            </div>
+          )}
+        </div>
 
-
-        <div className="text-center">
+        <div className="p-4 border-t border-gray-200">
           <button
             onClick={logout}
-            className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700"
+            className="w-full px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 transition-colors"
           >
             Logout
           </button>
         </div>
-
       </div>
+
+      {/* Conversation Detail - Right Column */}
+      {!isMobile && (
+        selectedConversationId ? (
+          <div className="flex flex-1">
+            <ConversationDetail conversationId={selectedConversationId} />
+          </div>
+        ) : (
+          <ConversationPlaceholder />
+        )
+      )}
     </div>
   );
 }
