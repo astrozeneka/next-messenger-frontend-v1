@@ -78,9 +78,9 @@ model users {
   created_at           DateTime?              @db.Timestamp(0)
   updated_at           DateTime?              @db.Timestamp(0)
   google_id            String?                @unique(map: "users_google_id_unique") @db.VarChar(255)
-  public_key           String?                @db.Text
   conversation_members conversation_members[]
   msgs                 msgs[]
+  public_keys          public_keys[]
 }
 
 model conversation_members {
@@ -118,11 +118,26 @@ model msgs {
   content         String?       @db.Text
   type            msgs_type     @default(text)
   status          msgs_status   @default(sent)
+  public_key_id   BigInt?       @db.UnsignedBigInt
   conversations   conversations @relation(fields: [conversation_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "msgs_conversation_id_foreign")
+  public_keys     public_keys?  @relation(fields: [public_key_id], references: [id], onUpdate: Restrict, map: "msgs_public_key_id_foreign")
   users           users         @relation(fields: [sender_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "msgs_sender_id_foreign")
 
   @@index([conversation_id, created_at], map: "msgs_conversation_id_created_at_index")
   @@index([sender_id], map: "msgs_sender_id_foreign")
+  @@index([public_key_id], map: "msgs_public_key_id_foreign")
+}
+
+model public_keys {
+  id               BigInt    @id @default(autoincrement()) @db.UnsignedBigInt
+  public_key_value String    @db.Text
+  user_id          BigInt    @db.UnsignedBigInt
+  created_at       DateTime? @db.Timestamp(0)
+  updated_at       DateTime? @db.Timestamp(0)
+  msgs             msgs[]
+  users            users     @relation(fields: [user_id], references: [id], onDelete: Cascade, onUpdate: Restrict, map: "public_keys_user_id_foreign")
+
+  @@index([user_id], map: "public_keys_user_id_foreign")
 }
 
 enum conversations_type {

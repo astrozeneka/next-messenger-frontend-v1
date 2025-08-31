@@ -70,7 +70,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             
             const updatePayload = {
                 ...entity,
-                id: entity.id.toString(),
+                id: entity.id.toString(), // ???
                 conversation_id: entity.conversation_id.toString(),
                 sender_id: entity.sender_id.toString(),
                 latestMessage: latestMessage ? {
