@@ -34,14 +34,14 @@ export const useMessages = (channel: string = 'chat') => {
       setMessages((prevMessages) => [...prevMessages, data]);
     });*/
 
-    channelInstance.bind('message-sent', (data: Message) => {
-      console.log("Hello, receive message-sent", data);
+    channelInstance.bind('message-updated', (data: Message) => {
+      console.log("Hello, receive message-updated", data);
       setMessages((prevMessages) => [...prevMessages, data]);
     });
 
     return () => {
         //channelInstance.unbind('new-message');
-        channelInstance.unbind('message-sent');
+        channelInstance.unbind('message-updated');
         pusher.unsubscribe(channel);
     }
   }, [channel]);
