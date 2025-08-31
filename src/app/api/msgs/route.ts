@@ -52,9 +52,23 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 }
             });
 
+            // Calculate unread count for this specific user
+            const unreadCount = await prisma.msgs.count({
+                where: {
+                    conversation_id: conversation_id,
+                    sender_id: {
+                        not: cm.user_id
+                    },
+                    status: {
+                        in: ['sent', 'delivered']
+                    }
+                }
+            });
+
             const remoteId = cm.user_id;
             console.log("Trigger 'conversation updated' to", `user.${remoteId}.conversations`)
-            console.log({
+            
+            const updatePayload = {
                 ...entity,
                 id: entity.id.toString(),
                 conversation_id: entity.conversation_id.toString(),
@@ -64,20 +78,12 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     content: latestMessage.content,
                     created_at: latestMessage.created_at,
                     sender_id: latestMessage.sender_id.toString()
-                } : null
-            })
-            await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', {
-                ...entity,
-                id: entity.id.toString(),
-                conversation_id: entity.conversation_id.toString(),
-                sender_id: entity.sender_id.toString(),
-                latestMessage: latestMessage ? {
-                    id: latestMessage.id.toString(),
-                    content: latestMessage.content,
-                    created_at: latestMessage.created_at,
-                    sender_id: latestMessage.sender_id.toString()
-                } : null
-            });
+                } : null,
+                unread_count: unreadCount
+            };
+
+            console.log(updatePayload);
+            await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', updatePayload);
         }
         
 

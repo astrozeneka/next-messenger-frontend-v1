@@ -78,6 +78,19 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
           }
         });
 
+        // 3.B Calculate unread count (messages from other users that are not 'read')
+        const unreadCount = await prisma.msgs.count({
+          where: {
+            conversation_id: parseInt(conversationId),
+            sender_id: {
+              not: parseInt(currentUser!.id)
+            },
+            status: {
+              in: ['sent', 'delivered']
+            }
+          }
+        });
+
         return {
           ...user,
           id: user.id.toString(),
@@ -85,8 +98,10 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
           latest_message: latestMessage ? {
             id: latestMessage.id.toString(),
             content: latestMessage.content,
-            created_at: latestMessage.created_at
-          } : null
+            created_at: latestMessage.created_at,
+            sender_id: latestMessage.sender_id.toString()
+          } : null,
+          unread_count: unreadCount
         };
       })
     );

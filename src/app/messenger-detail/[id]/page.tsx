@@ -2,6 +2,7 @@
 
 import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
+import { useConversations } from "@/hooks/useConversations";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
 import { useEffect, useState } from "react";
 
@@ -73,6 +74,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
     token || undefined,
     conversation_id
   );
+  const { updateUnreadCount } = useConversations(user?.id, token || undefined);
 
   // State variables
   const [message, setMessage] = useState('');
@@ -174,6 +176,11 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
               if (readResponse.ok) {
                 const readResult = await readResponse.json();
                 console.log(`Marked ${readResult.updated_count} messages as read`);
+                
+                // Reset unread count to 0 since we just marked messages as read
+                if (readResult.updated_count > 0) {
+                  updateUnreadCount(conversation_id, 0);
+                }
               } else {
                 console.error('Error marking messages as read:', readResponse.statusText);
               }

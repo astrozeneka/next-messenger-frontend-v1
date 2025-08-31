@@ -153,7 +153,14 @@ export default function MessengerMaster() {
                   onClick={() => router.push(`/messenger-detail/${conversation.conversation_id}`)}
                 >
                   <div className="flex justify-between items-center">
-                    <span className="font-medium">{conversation.name} (#C{conversation.conversation_id})</span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium">{conversation.name} (#C{conversation.conversation_id})</span>
+                      {conversation.unread_count > 0 && (
+                        <span className="bg-blue-600 text-white text-xs rounded-full px-2 py-1 min-w-[20px] h-5 flex items-center justify-center font-bold">
+                          {conversation.unread_count}
+                        </span>
+                      )}
+                    </div>
                     <span className="text-xs text-gray-400">{conversation.email}</span>
                   </div>
                   <div className="mt-1">

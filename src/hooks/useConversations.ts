@@ -18,11 +18,13 @@ interface Conversation {
   name: string;
   email: string;
   latest_message: Msg | null;
+  unread_count: number;
 }
 
 interface ConversationUpdate {
   conversation_id: string;
   latestMessage: Msg;
+  unread_count: number;
 }
 
 export const useConversations = (userId?: string, token?: string) => {
@@ -30,8 +32,8 @@ export const useConversations = (userId?: string, token?: string) => {
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
 
-  const updateConversationWithMessage = useCallback((conversationId: string, message: Msg) => {
-    console.log('Updating conversation:', conversationId, 'with message:', message);
+  const updateConversationWithMessage = useCallback((conversationId: string, message: Msg, unreadCount?: number) => {
+    console.log('Updating conversation:', conversationId, 'with message:', message, 'unread_count:', unreadCount);
     
     setConversations(prev => {
       const updated = prev.map(conv => {
@@ -47,7 +49,8 @@ export const useConversations = (userId?: string, token?: string) => {
             console.log('Updating conversation', conversationId, 'from:', conv.latest_message, 'to:', message);
             return {
               ...conv,
-              latest_message: message
+              latest_message: message,
+              unread_count: unreadCount !== undefined ? unreadCount : conv.unread_count
             };
           }
         }
@@ -120,7 +123,7 @@ export const useConversations = (userId?: string, token?: string) => {
 
     channelInstance.bind('conversation-updated', (data: ConversationUpdate) => {
       console.log('conversation-updated received', data);
-      updateConversationWithMessage(data.conversation_id, data.latestMessage);
+      updateConversationWithMessage(data.conversation_id, data.latestMessage, data.unread_count);
     });
 
     return () => {
@@ -133,11 +136,23 @@ export const useConversations = (userId?: string, token?: string) => {
     fetchConversations();
   }, [fetchConversations]);
 
+  // Function to update unread count for a specific conversation
+  const updateUnreadCount = useCallback((conversationId: string, newUnreadCount: number) => {
+    setConversations(prev => 
+      prev.map(conv => 
+        conv.conversation_id === conversationId 
+          ? { ...conv, unread_count: newUnreadCount }
+          : conv
+      )
+    );
+  }, []);
+
   return {
     conversations,
     isLoading,
     isConnected,
     refreshConversations,
-    updateConversationWithMessage
+    updateConversationWithMessage,
+    updateUnreadCount
   };
 };
