@@ -174,6 +174,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
   };
 
   const logout = () => {
+    console.log("Calling logout")
     setUser(null);
     setToken(null);
     setRefreshToken(null);

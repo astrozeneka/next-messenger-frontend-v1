@@ -59,6 +59,32 @@ export default function MessengerMaster() {
   const { messages, isConnected } = useMessages('chat');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
+  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+
+  // Load the user list from the server
+  useEffect(() => {
+    if (!token) return;
+
+    const fetchUsers = async () => {
+      try {
+        const response = await fetch('/api/users', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json',
+          },
+        });
+        if (!response.ok) {
+          throw new Error('Failed to fetch users');
+        }
+        const data = await response.json();
+        setUsers(data);
+      } catch (error) {
+        console.error('Error fetching users:', error);
+      }
+    };
+
+    fetchUsers();
+  }, [token]);
 
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;
@@ -240,7 +266,25 @@ export default function MessengerMaster() {
             {isConnected ? '🟢 Connected' : '🔴 Disconnected'}
           </div>
         </div>
-        
+
+        {users.length > 0 && (
+          <div className="bg-gray-100 p-4 rounded-md">
+            <h2 className="text-lg font-semibold">User List</h2>
+            <ul className="space-y-2">
+              {users.map((user) => (
+                <li 
+                  key={user.id} 
+                  className="flex justify-between p-2 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                  onClick={() => router.push(`/messenger-detail/${user.id}`)}
+                >
+                  <span>{user.name}</span>
+                  <span className="text-sm text-gray-500">{user.email}</span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
         <div className="bg-gray-100 p-4 rounded-md h-64 overflow-y-auto">
           {messages.length === 0 ? (
             <p className="text-gray-500 text-center">No messages yet...</p>
