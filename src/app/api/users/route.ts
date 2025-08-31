@@ -38,20 +38,43 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         user_id: true
       }
     });
-    console.log("==>", conversations)
     
-    // 3. Match each user with their conversation ID with current user
-    const serializedUsers = users.map(user => {
-      const userConversation = conversations.find(conv => 
-        conv.user_id.toString() === user.id.toString() && conv.user_id.toString() !== currentUser!.id
-      );
-      
-      return {
-        ...user,
-        id: user.id.toString(),
-        conversation_id: userConversation ? userConversation.conversation_id.toString() : null
-      };
-    });
+    // 3. For each user, find or create a conversation
+    const serializedUsers = await Promise.all(
+      users.map(async (user) => {
+        const userConversation = conversations.find((conv: any) => 
+          conv.user_id.toString() === user.id.toString() && conv.user_id.toString() !== currentUser!.id
+        );
+        
+        let conversationId: string;
+        
+        if (userConversation) {
+          conversationId = userConversation.conversation_id.toString();
+        } else {
+          // Create new private conversation
+          const newConversation = await prisma.conversations.create({
+            data: {
+              type: 'private',
+              conversation_members: {
+                createMany: {
+                  data: [
+                    { user_id: parseInt(currentUser!.id) },
+                    { user_id: user.id }
+                  ]
+                }
+              }
+            }
+          });
+          conversationId = newConversation.id.toString();
+        }
+        
+        return {
+          ...user,
+          id: user.id.toString(),
+          conversation_id: conversationId
+        };
+      })
+    );
     return NextResponse.json(serializedUsers);
   } catch (error) {
     return NextResponse.json({ error: `${error}` }, { status: 500 });

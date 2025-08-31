@@ -59,7 +59,9 @@ export default function MessengerMaster() {
   const { messages, isConnected } = useMessages('chat');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
-  const [users, setUsers] = useState<Array<{ id: string; name: string; email: string }>>([]);
+  const [users, setUsers] = useState<Array<{
+    conversation_id: string; id: string; name: string; email: string 
+}>>([]);
 
   // Load the user list from the server
   useEffect(() => {
@@ -275,9 +277,9 @@ export default function MessengerMaster() {
                 <li 
                   key={user.id} 
                   className="flex justify-between p-2 rounded cursor-pointer hover:bg-gray-200 transition-colors"
-                  onClick={() => router.push(`/messenger-detail/${user.id}`)}
+                  onClick={() => router.push(`/messenger-detail/${user.conversation_id}`)}
                 >
-                  <span>{user.name}</span>
+                  <span>{user.name} (#C{user.conversation_id})</span>
                   <span className="text-sm text-gray-500">{user.email}</span>
                 </li>
               ))}
