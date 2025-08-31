@@ -30,12 +30,17 @@ export const useMessages = (channel: string = 'chat') => {
       setIsConnected(false);
     });
 
-    channelInstance.bind('new-message', (data: Message) => {
-        setMessages((prevMessages) => [...prevMessages, data]);
+    /*channelInstance.bind('new-message', (data: Message) => {
+      setMessages((prevMessages) => [...prevMessages, data]);
+    });*/
+
+    channelInstance.bind('message-sent', (data: Message) => {
+      setMessages((prevMessages) => [...prevMessages, data]);
     });
 
     return () => {
-        channelInstance.unbind('new-message');
+        //channelInstance.unbind('new-message');
+        channelInstance.unbind('message-sent');
         pusher.unsubscribe(channel);
     }
   }, [channel]);

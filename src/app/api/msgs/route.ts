@@ -26,6 +26,32 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 status: 'sent' // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
             }
         });
+
+        // Broadcast to everyone
+        await pusher.trigger(`conversation.${conversation_id}`, 'message-sent', {
+            ...entity,
+            id: entity.id.toString(),
+            conversation_id: entity.conversation_id.toString(),
+            sender_id: entity.sender_id.toString()
+        })
+
+        // For each conversation member
+        const conversation_members = await prisma.conversation_members.findMany({
+            where: {
+                conversation_id: conversation_id
+            }
+        })
+        for (const cm of conversation_members || []) {
+            console.log("Trigger 'conversation updated' to", `user.${cm.id}.conversations`)
+            await pusher.trigger(`user.${cm.id}.conversations`, 'conversation-updated', {
+                ...entity,
+                id: entity.id.toString(),
+                conversation_id: entity.conversation_id.toString(),
+                sender_id: entity.sender_id.toString()
+            });
+        }
+        
+
         return NextResponse.json({
             ...entity,
             id: entity.id.toString(),

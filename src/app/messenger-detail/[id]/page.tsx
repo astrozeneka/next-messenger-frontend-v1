@@ -1,11 +1,13 @@
 'use client';
 
 import { useAuth } from "@/contexts/AuthContext";
+import { useMessages } from "@/hooks/useMessages";
 import { encryptMessage } from "@/lib/crypto";
 import { useEffect, useState } from "react";
 
 export default function MessengerDetail({ params }: { params: { id: string } }) {
   const conversation_id = params.id;
+  const { messages, isConnected } = useMessages(`conversation.${conversation_id}`);
 
   const { token } = useAuth();
 
