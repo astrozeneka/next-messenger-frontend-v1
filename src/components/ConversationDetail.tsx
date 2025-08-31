@@ -20,11 +20,15 @@ export interface Msg {
 interface DecryptedMessageProps {
   message: Msg;
   encryptionKey: string | null;
+  isReceived: boolean;
+  onEdit?: (messageId: string, newContent: string) => void;
 }
 
-function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
+function DecryptedMessage({ message, encryptionKey, isReceived, onEdit }: DecryptedMessageProps) {
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
+  const [isEditing, setIsEditing] = useState(false);
+  const [editContent, setEditContent] = useState('');
 
   useEffect(() => {
     const decrypt = async () => {
@@ -56,9 +60,64 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
     );
   }
 
+  const handleEditClick = () => {
+    setEditContent(decryptedContent);
+    setIsEditing(true);
+  };
+
+  const handleSaveEdit = () => {
+    if (onEdit && editContent.trim() !== decryptedContent) {
+      onEdit(message.id, editContent.trim());
+    }
+    setIsEditing(false);
+  };
+
+  const handleCancelEdit = () => {
+    setIsEditing(false);
+    setEditContent('');
+  };
+
+  if (isEditing) {
+    return (
+      <div className="mb-2">
+        <span className="font-bold">REMOTE:</span>
+        <div className="mt-1">
+          <textarea
+            value={editContent}
+            onChange={(e) => setEditContent(e.target.value)}
+            className="w-full p-2 border border-gray-300 rounded text-sm"
+            rows={2}
+          />
+          <div className="flex gap-2 mt-1">
+            <button
+              onClick={handleSaveEdit}
+              className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
+            >
+              Save
+            </button>
+            <button
+              onClick={handleCancelEdit}
+              className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mb-2">
       <span className="font-bold">REMOTE:</span> {decryptedContent} [{message.status}]
+      {!isReceived && (
+        <button 
+          onClick={handleEditClick}
+          className="text-xs text-gray-500 hover:text-blue-500 ml-1"
+        >
+          (Edit)
+        </button>
+      )}
     </div>
   );
 }
@@ -289,6 +348,36 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     fileInput?.click();
   };
 
+  const handleEditMessage = async (messageId: string, newContent: string) => {
+    if (!remoteUser?.public_key || !token) {
+      console.error('Remote user public key or token not available');
+      return;
+    }
+
+    try {
+      const encryptedMessage = await encryptMessage(newContent, remoteUser.public_key);
+      const response = await fetch(`/api/msgs/${messageId}`, {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          content: encryptedMessage
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Message edited successfully:', data);
+      } else {
+        console.error('Error editing message:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error editing message:', error);
+    }
+  };
+
   if (!remoteUser) {
     return (
       <div className="flex-1 flex items-center justify-center">
@@ -313,6 +402,8 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
             <DecryptedMessage
               message={msg}
               encryptionKey={encryptionKey}
+              isReceived={msg.sender_id !== user?.id}
+              onEdit={handleEditMessage}
             />
           </div>
         ))}
