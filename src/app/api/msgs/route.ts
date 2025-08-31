@@ -28,7 +28,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         });
 
         // Broadcast to everyone
-        await pusher.trigger(`conversation.${conversation_id}`, 'message-sent', {
+        await pusher.trigger(`conversation.${conversation_id}`, 'message-updated', {
             ...entity,
             id: entity.id.toString(),
             conversation_id: entity.conversation_id.toString(),
@@ -143,8 +143,8 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             // Send notification for each updated message
             for (const msg of updatedMessagesList) {
                 // Broadcast to the conversation channel
-                console.log("Trigger 'message-sent' to", `conversation.${conversationIdNum}`);
-                await pusher.trigger(`conversation.${conversationIdNum}`, 'message-sent', {
+                console.log("Trigger 'message-updated' to", `conversation.${conversationIdNum}`);
+                await pusher.trigger(`conversation.${conversationIdNum}`, 'message-updated', {
                     ...msg,
                     id: msg.id.toString(),
                     conversation_id: msg.conversation_id.toString(),

@@ -65,7 +65,7 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
 
 export default function MessengerDetail({ params }: { params: { id: string } }) {
   const conversation_id = params.id;
-  const { messages, isConnected } = useMessages(`conversation.${conversation_id}`);
+  const { messages, isConnected, initializeMessages } = useMessages(`conversation.${conversation_id}`);
 
   const { token, user } = useAuth();
 
@@ -80,7 +80,6 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
     public_key: string | null;
   } | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
-  const [loadedMessages, setLoadedMessages] = useState<Msg[]>([]);
 
   // Get the remote user list
   useEffect(()=>{
@@ -138,14 +137,15 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
 
         if (response.ok) {
           const fetchedMessages = await response.json();
-          setLoadedMessages(fetchedMessages.map((msg: any) => ({
+          const formattedMessages = fetchedMessages.map((msg: any) => ({
             ...msg,
             id: msg.id.toString(),
             conversation_id: msg.conversation_id.toString(),
             sender_id: msg.sender_id.toString()
-          })));
-          console.log('Messages loaded:', fetchedMessages.length);
-          console.log(fetchedMessages);
+          }));
+          
+          // Initialize messages using the hook's method
+          initializeMessages(formattedMessages);
         } else {
           console.error('Error loading messages:', response.statusText);
         }
@@ -155,7 +155,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
     };
 
     loadMessages();
-  }, [token, conversation_id]);
+  }, [token, conversation_id, initializeMessages]);
 
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;
@@ -276,9 +276,9 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
         </div>
 
         <div className="bg-gray-100 p-4 rounded-md h-64 overflow-y-auto">
-          {/* Display loaded messages */}
-          {loadedMessages.map((msg) => (
-            <div key={`loaded-${msg.id}`}>
+          {/* Display unified message list (sorted and deduplicated) */}
+          {messages.map((msg) => (
+            <div key={msg.id}>
               <DecryptedMessage
                 message={msg}
                 encryptionKey={encryptionKey}
@@ -286,17 +286,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
             </div>
           ))}
           
-          {/* Display real-time messages (these have different structure from Pusher) */}
-          {messages.map((msg, index) => (
-            <div key={`realtime-${index}`}>
-              <DecryptedMessage
-                message={msg as unknown as Msg}
-                encryptionKey={encryptionKey}
-              />
-            </div>
-          ))}
-          
-          {loadedMessages.length === 0 && messages.length === 0 && (
+          {messages.length === 0 && (
             <p className="text-gray-500 text-center">No messages yet...</p>
           )}
         </div>
