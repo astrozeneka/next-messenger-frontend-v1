@@ -117,6 +117,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
           }
         });
         const data = await response.json();
+        console.log("Retrieve remote users", data);
         if (data.length !== 1) {
           console.error('Unexpected number of remote users:', data);
           return;

@@ -20,7 +20,14 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
           select: {
             id: true,
             name: true,
-            email: true
+            email: true,
+            public_keys: {
+              select: {
+                id: true,
+                public_key_value: true,
+                created_at: true
+              }
+            }
           }
         }
       }
@@ -28,7 +35,12 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
 
     const serializedUsers = remoteUsers.map((member: any) => ({
       ...member.users,
-      id: member.users.id.toString()
+      id: member.users.id.toString(),
+      public_keys: member.users.public_keys.map((key: any) => ({
+        id: key.id.toString(),
+        public_key_value: key.public_key_value,
+        created_at: key.created_at
+      }))
     }));
 
     return NextResponse.json(serializedUsers);
