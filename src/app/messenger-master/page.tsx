@@ -4,29 +4,36 @@ import { useAuth } from '../../contexts/AuthContext';
 import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
-import { getPrivateKey, encryptMessage, decryptMessage } from '../../lib/crypto';
+import { getPrivateKey, decryptMessage } from '../../lib/crypto';
 import { Msg } from '../messenger-detail/[id]/page';
 
-interface DecryptedMessageProps {
-  message: { username: string; message: string };
+
+interface DecryptedLatestMessageProps {
+  message: Msg | null;
   encryptionKey: string | null;
 }
 
-function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
+function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessageProps) {
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
 
   useEffect(() => {
     const decrypt = async () => {
+      if (!message) {
+        setDecryptedContent('No messages yet');
+        setIsDecrypting(false);
+        return;
+      }
+
       if (!encryptionKey) {
-        setDecryptedContent('[Unable to decrypt - private key not loaded]');
+        setDecryptedContent('[Unable to decrypt]');
         setIsDecrypting(false);
         return;
       }
 
       try {
-        const decrypted = await decryptMessage(message.message, encryptionKey);
-        setDecryptedContent(decrypted);
+        const decrypted = await decryptMessage(message.content, encryptionKey);
+        setDecryptedContent(decrypted.length > 30 ? decrypted.substring(0, 30) + '...' : decrypted);
       } catch (error) {
         console.error('Decryption failed:', error);
         setDecryptedContent('[Decryption failed]');
@@ -36,30 +43,19 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
     };
 
     decrypt();
-  }, [message.message, encryptionKey]);
+  }, [message, encryptionKey]);
 
   if (isDecrypting) {
-    return (
-      <div className="mb-2">
-        <span className="font-bold">{message.username}:</span> <span className="italic text-gray-500">Decrypting...</span>
-      </div>
-    );
+    return <span className="text-sm text-gray-400 italic">Decrypting...</span>;
   }
 
-  return (
-    <div className="mb-2">
-      <span className="font-bold">{message.username}:</span> {decryptedContent}
-    </div>
-  );
+  return <span className="text-sm text-gray-500">{decryptedContent}</span>;
 }
 
 export default function MessengerMaster() {
   const { user, isAuthenticated, loading, logout, token } = useAuth();
   const router = useRouter();
-  const [message, setMessage] = useState('');
-  const { messages, isConnected } = useMessages('chat');
-  const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [isSending, setIsSending] = useState(false);
+  const { isConnected } = useMessages('chat');
   const [users, setUsers] = useState<Array<{
     conversation_id: string; 
     id: string; 
@@ -93,109 +89,6 @@ export default function MessengerMaster() {
     fetchUsers();
   }, [token]);
 
-  const handleMessageSend = async () => {
-    if (!message.trim() && !selectedFile) return;
-    
-    if (!remoteUser?.public_key) {
-      console.error('Remote user public key not available');
-      return;
-    }
-
-    setIsSending(true);
-    
-    try {
-      let messageToSend = message.trim();
-
-      // If there's a selected file, upload it first
-      if (selectedFile) {
-        // Get presigned URL
-        const presignedResponse = await fetch('/api/upload/presigned-url', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            fileName: selectedFile.name,
-            fileType: selectedFile.type,
-            fileSize: selectedFile.size,
-          }),
-        });
-
-        if (!presignedResponse.ok) {
-          throw new Error('Failed to get presigned URL');
-        }
-
-        const { presignedUrl, key } = await presignedResponse.json();
-
-        // Upload file to S3
-        const uploadResponse = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: selectedFile,
-          headers: {
-            'Content-Type': selectedFile.type,
-          },
-        });
-
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload file');
-        }
-
-        // Construct S3 URL
-        const fileUrl = `https://next-messenger.s3.ap-southeast-1.amazonaws.com/${key}`;
-        
-        // Append file info to message
-        const fileInfo = `(${selectedFile.name})[${fileUrl}]`;
-        messageToSend = messageToSend ? `${messageToSend} ${fileInfo}` : fileInfo;
-
-        console.log('File uploaded successfully:', key);
-      }
-
-      // Encrypt and send the message
-      const encryptedMessage = await encryptMessage(messageToSend, remoteUser.public_key);
-      
-      const response = await fetch('/api/messages', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          message: encryptedMessage,
-          username: user?.name,
-        }),
-      });
-
-      if (response.ok) {
-        console.log('Message sent successfully');
-        setMessage('');
-        setSelectedFile(null);
-        
-        // Reset file input
-        const fileInput = document.getElementById('file-input') as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
-        }
-      } else {
-        console.error('Failed to send message');
-      }
-    } catch (error) {
-      console.error('Error sending message:', error);
-    } finally {
-      setIsSending(false);
-    }
-  }
-
-  const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (file) {
-      setSelectedFile(file);
-      console.log('File selected:', file);
-    }
-  };
-
-  const handleSendFileClick = () => {
-    const fileInput = document.getElementById('file-input') as HTMLInputElement;
-    fileInput?.click();
-  };
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -203,40 +96,7 @@ export default function MessengerMaster() {
     }
   }, [isAuthenticated, loading, router]);
 
-  const [remoteUser, setRemoteUser] = useState<{
-    id: string;
-    name: string;
-    email: string;
-    public_key: string | null;
-  } | null>(null);
-
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
-  
-  /*useEffect(() => {
-    const fetchRemoteUser = async () => {
-      if (!user?.email || !token) return;
-
-      try {
-        const response = await fetch(`/api/users/remote?email=${encodeURIComponent(user.email)}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json',
-          },
-        });
-        if (response.ok) {
-          const remoteUserData = await response.json();
-          setRemoteUser(remoteUserData);
-          console.log("Remote user fetched:", remoteUserData);
-        } else {
-          console.error('Failed to fetch remote user');
-        }
-      } catch (error) {
-        console.error('Error fetching remote user:', error);
-      }
-    };
-
-    fetchRemoteUser();
-  }, [user, token]);*/
 
   useEffect(() => {
     console.log(user); // no public_key provided
@@ -281,74 +141,25 @@ export default function MessengerMaster() {
               {users.map((user) => (
                 <li 
                   key={user.id} 
-                  className="flex justify-between p-2 rounded cursor-pointer hover:bg-gray-200 transition-colors"
+                  className="flex flex-col p-3 rounded cursor-pointer hover:bg-gray-200 transition-colors"
                   onClick={() => router.push(`/messenger-detail/${user.conversation_id}`)}
                 >
-                  <span>{user.name} (#C{user.conversation_id})</span>
-                  <span className="text-sm text-gray-500">{user.email}</span>
+                  <div className="flex justify-between items-center">
+                    <span className="font-medium">{user.name} (#C{user.conversation_id})</span>
+                    <span className="text-xs text-gray-400">{user.email}</span>
+                  </div>
+                  <div className="mt-1">
+                    <DecryptedLatestMessage 
+                      message={user.latest_message} 
+                      encryptionKey={encryptionKey} 
+                    />
+                  </div>
                 </li>
               ))}
             </ul>
           </div>
         )}
 
-        <div className="bg-gray-100 p-4 rounded-md h-64 overflow-y-auto">
-          {messages.length === 0 ? (
-            <p className="text-gray-500 text-center">No messages yet...</p>
-          ) : (
-            messages.map((msg, index) => (
-              <DecryptedMessage 
-                key={index} 
-                message={msg} 
-                encryptionKey={encryptionKey} 
-              />
-            ))
-          )}
-        </div>
-        
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
-          />
-          <button
-            onClick={handleMessageSend}
-            disabled={isSending}
-            className={`px-4 py-2 text-white rounded-md ${
-              isSending 
-                ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
-            }`}
-          >
-            {isSending ? 'Sending...' : 'Send'}
-          </button>
-          <button
-            onClick={handleSendFileClick}
-            className={`px-4 py-2 text-white rounded-md ${
-              selectedFile
-                ? 'bg-orange-600 hover:bg-orange-700'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {selectedFile ? 'File Selected' : 'Send File'}
-          </button>
-        </div>
-
-        <input
-          id="file-input"
-          type="file"
-          onChange={handleFileSelect}
-          className="hidden"
-        />
-
-        {selectedFile && (
-          <div className="text-sm text-gray-600">
-            Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-          </div>
-        )}
 
         <div className="text-center">
           <button
