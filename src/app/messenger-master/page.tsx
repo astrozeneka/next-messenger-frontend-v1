@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 import { getPrivateKey, decryptMessage } from '../../lib/crypto';
 import { Msg } from '../messenger-detail/[id]/page';
+import getPusherClient from '@/lib/pusher';
 
 
 interface DecryptedLatestMessageProps {
@@ -111,6 +112,50 @@ export default function MessengerMaster() {
       router.push('/login');
     }
   }, [user, router]);
+
+  // Try to listen to the conversation-updated channel
+  useEffect(()=>{
+    if (!user?.id) return;
+    const pusher = getPusherClient();
+    const channelInstance = pusher.subscribe(`user.${user?.id}.conversations`);
+
+    pusher.connection.bind('connected', () => {
+      // setIsConnected(true);
+    });
+
+    pusher.connection.bind('disconnected', () => {
+      // setIsConnected(false);
+    });
+
+    pusher.connection.bind('error', () => {
+      // setIsConnected(false);
+    });
+
+    channelInstance.bind('conversation-updated', (data) => {
+      console.log('Conversation updated:', data);
+      /* {
+        "id": "86",
+        "created_at": null,
+        "updated_at": null,
+        "conversation_id": "19",
+        "sender_id": "24",
+        "content": "tq27w0s8Ar1rJBPPTc1YxOhlzRp+h8OlXMGB7peGSinjxw4Dse9vmP96s8fORFeawEQIlE7I/4AFZHKOIoR5NbYmxjuYy1aP40DQJmL55UKQyIPjkPxfhyWjQ/xhAdWiBmiM8UKcaxHC8vTSkMqpj2n4M00kSWEo5Tykle+ijpXX+/QwSm8fTjAx5VDXMJzr/p7CVc+4N0t+L8pPue39up073AKrLKKRfYyRcHHD+hFemTsMbHSp2/03qohPL98W/5psWr/9YC1KOMV55cr3ecmlzX/nSwAU6/ZWSi1qCTRaVR1J0ApbCwLfdhnX/L6SA3SbhqXs2DWL3IkUjql7kg==",
+        "type": "text",
+        "status": "sent",
+        "latestMessage": {
+            "id": "86",
+            "content": "tq27w0s8Ar1rJBPPTc1YxOhlzRp+h8OlXMGB7peGSinjxw4Dse9vmP96s8fORFeawEQIlE7I/4AFZHKOIoR5NbYmxjuYy1aP40DQJmL55UKQyIPjkPxfhyWjQ/xhAdWiBmiM8UKcaxHC8vTSkMqpj2n4M00kSWEo5Tykle+ijpXX+/QwSm8fTjAx5VDXMJzr/p7CVc+4N0t+L8pPue39up073AKrLKKRfYyRcHHD+hFemTsMbHSp2/03qohPL98W/5psWr/9YC1KOMV55cr3ecmlzX/nSwAU6/ZWSi1qCTRaVR1J0ApbCwLfdhnX/L6SA3SbhqXs2DWL3IkUjql7kg==",
+            "created_at": null,
+            "sender_id": "24"
+        }
+    }*/
+    });
+
+    return () => {
+      channelInstance.unbind_all();
+      channelInstance.unsubscribe();
+    };
+  }, [user?.id]);
 
   if (loading) {
     return (

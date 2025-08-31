@@ -42,12 +42,41 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             }
         })
         for (const cm of conversation_members || []) {
-            console.log("Trigger 'conversation updated' to", `user.${cm.id}.conversations`)
-            await pusher.trigger(`user.${cm.id}.conversations`, 'conversation-updated', {
+            // Retrieve the last message
+            const latestMessage = await prisma.msgs.findFirst({
+                where: {
+                    conversation_id: conversation_id
+                },
+                orderBy: {
+                    created_at: 'desc'
+                }
+            });
+
+            const remoteId = cm.user_id;
+            console.log("Trigger 'conversation updated' to", `user.${remoteId}.conversations`)
+            console.log({
                 ...entity,
                 id: entity.id.toString(),
                 conversation_id: entity.conversation_id.toString(),
-                sender_id: entity.sender_id.toString()
+                sender_id: entity.sender_id.toString(),
+                latestMessage: latestMessage ? {
+                    id: latestMessage.id.toString(),
+                    content: latestMessage.content,
+                    created_at: latestMessage.created_at,
+                    sender_id: latestMessage.sender_id.toString()
+                } : null
+            })
+            await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', {
+                ...entity,
+                id: entity.id.toString(),
+                conversation_id: entity.conversation_id.toString(),
+                sender_id: entity.sender_id.toString(),
+                latestMessage: latestMessage ? {
+                    id: latestMessage.id.toString(),
+                    content: latestMessage.content,
+                    created_at: latestMessage.created_at,
+                    sender_id: latestMessage.sender_id.toString()
+                } : null
             });
         }
         
