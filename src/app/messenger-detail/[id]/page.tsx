@@ -5,7 +5,8 @@ import { useMessages } from "@/hooks/useMessages";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
 import { useEffect, useState } from "react";
 
-interface Msg {
+// TODO, refactor in a separate interface file
+export interface Msg {
   id: string
   created_at: any
   updated_at: any

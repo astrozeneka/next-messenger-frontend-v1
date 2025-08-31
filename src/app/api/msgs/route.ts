@@ -138,7 +138,6 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
                     created_at: 'asc'
                 }
             });
-            console.log("=======>", updatedMessagesList);
 
             // Send notification for each updated message
             for (const msg of updatedMessagesList) {

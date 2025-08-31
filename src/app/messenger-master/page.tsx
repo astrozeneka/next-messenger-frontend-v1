@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 import { getPrivateKey, encryptMessage, decryptMessage } from '../../lib/crypto';
+import { Msg } from '../messenger-detail/[id]/page';
 
 interface DecryptedMessageProps {
   message: { username: string; message: string };
@@ -60,7 +61,11 @@ export default function MessengerMaster() {
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [isSending, setIsSending] = useState(false);
   const [users, setUsers] = useState<Array<{
-    conversation_id: string; id: string; name: string; email: string 
+    conversation_id: string; 
+    id: string; 
+    name: string; 
+    email: string;
+    latest_message: Msg | null;
 }>>([]);
 
   // Load the user list from the server
@@ -207,7 +212,7 @@ export default function MessengerMaster() {
 
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   
-  useEffect(() => {
+  /*useEffect(() => {
     const fetchRemoteUser = async () => {
       if (!user?.email || !token) return;
 
@@ -231,7 +236,7 @@ export default function MessengerMaster() {
     };
 
     fetchRemoteUser();
-  }, [user, token]);
+  }, [user, token]);*/
 
   useEffect(() => {
     console.log(user); // no public_key provided

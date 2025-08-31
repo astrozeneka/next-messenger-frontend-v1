@@ -67,11 +67,26 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
           });
           conversationId = newConversation.id.toString();
         }
-        
+
+        // 3.A For each conversation, find the latest message
+        const latestMessage = await prisma.msgs.findFirst({
+          where: {
+            conversation_id: conversationId
+          },
+          orderBy: {
+            created_at: 'desc'
+          }
+        });
+
         return {
           ...user,
           id: user.id.toString(),
-          conversation_id: conversationId
+          conversation_id: conversationId,
+          latest_message: latestMessage ? {
+            id: latestMessage.id.toString(),
+            content: latestMessage.content,
+            created_at: latestMessage.created_at
+          } : null
         };
       })
     );
