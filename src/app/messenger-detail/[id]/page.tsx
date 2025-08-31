@@ -1,6 +1,7 @@
 'use client';
 
 import { useAuth } from "@/contexts/AuthContext";
+import { encryptMessage } from "@/lib/crypto";
 import { useEffect, useState } from "react";
 
 export default function MessengerDetail({ params }: { params: { id: string } }) {
@@ -43,12 +44,33 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;
     
-    /*if (!remoteUser?.public_key) {
+    if (!remoteUser?.public_key) {
       console.error('Remote user public key not available');
       return;
-    }*/
+    }
 
+    const encryptedMessage = await encryptMessage(message, remoteUser.public_key);
+    const response = await fetch('/api/msgs', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      },
+      body: JSON.stringify({
+        conversation_id,
+        content: encryptedMessage
+      })
+    });
+
+
+    if (response.ok) {
+      const data = await response.json();
+      console.log('Message sent successfully:', data);
+    } else {
+      console.error('Error sending message:', response.statusText);
+    }
   }
+
 
   const handleSendFileClick = async () => {
     // TODO later
