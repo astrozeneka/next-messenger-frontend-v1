@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { getPusherClient } from '../lib/pusher';
 
 interface Msg {
@@ -71,11 +71,11 @@ export const useMessages = (channel: string = 'chat') => {
     }
   }, [channel]);
 
-  const initializeMessages = (initialMessages: Msg[]) => {
+  const initializeMessages = useCallback((initialMessages: Msg[]) => {
     setMessages(initialMessages.sort((a, b) => 
       new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
     ));
-  };
+  }, []);
 
   return { messages, isConnected, addOrUpdateMessage, initializeMessages };
 };
