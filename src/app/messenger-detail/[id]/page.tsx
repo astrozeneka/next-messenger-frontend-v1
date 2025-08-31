@@ -5,8 +5,19 @@ import { useMessages } from "@/hooks/useMessages";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
 import { useEffect, useState } from "react";
 
+interface Msg {
+  id: string
+  created_at: any
+  updated_at: any
+  conversation_id: string
+  sender_id: string
+  content: string
+  type: string
+  status: string
+}
+
 interface DecryptedMessageProps {
-  message: { username: string; message: string };
+  message: Msg;
   encryptionKey: string | null;
 }
 
@@ -23,7 +34,8 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
       }
 
       try {
-        const decrypted = await decryptMessage(message.message, encryptionKey);
+        console.log("Message", message.content) // This is undefined.
+        const decrypted = await decryptMessage(message.content, encryptionKey);
         setDecryptedContent(decrypted);
       } catch (error) {
         console.error('Decryption failed:', error);
@@ -34,19 +46,19 @@ function DecryptedMessage({ message, encryptionKey }: DecryptedMessageProps) {
     };
 
     decrypt();
-  }, [message.message, encryptionKey]);
+  }, [message.content, encryptionKey]);
 
   if (isDecrypting) {
     return (
       <div className="mb-2">
-        <span className="font-bold">{message.username}:</span> <span className="italic text-gray-500">Decrypting...</span>
+        <span className="font-bold">REMOTE:</span> <span className="italic text-gray-500">Decrypting...</span>
       </div>
     );
   }
 
   return (
     <div className="mb-2">
-      <span className="font-bold">{message.username}:</span> {decryptedContent}
+      <span className="font-bold">REMOTE:</span> {decryptedContent}
     </div>
   );
 }
@@ -232,11 +244,13 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
             <p className="text-gray-500 text-center">No messages yet...</p>
           ) : (
             messages.map((msg, index) => (
-              <DecryptedMessage 
-                key={index} 
-                message={msg} 
-                encryptionKey={encryptionKey} 
-              />
+              <div key={index}>
+                <DecryptedMessage
+                  key={index}
+                  message={msg as unknown as Msg}
+                  encryptionKey={encryptionKey}
+                />
+              </div>
             ))
           )}
         </div>
