@@ -15,7 +15,16 @@ export async function POST(request: NextRequest) {
     }
 
     const user = await prisma.users.findUnique({
-      where: { email }
+      where: { email },
+      include: {
+        public_keys: {
+          select: {
+            id: true,
+            public_key_value: true,
+            created_at: true
+          }
+        }
+      }
     });
 
     if (!user || !(await comparePassword(password, user.password))) {
@@ -40,7 +49,12 @@ export async function POST(request: NextRequest) {
         id: user.id.toString(),
         name: user.name,
         email: user.email
-      }
+      },
+      publicKeys: user.public_keys.map(key => ({
+        id: key.id.toString(),
+        publicKey: key.public_key_value,
+        createdAt: key.created_at
+      }))
     });
 
   } catch (error) {
