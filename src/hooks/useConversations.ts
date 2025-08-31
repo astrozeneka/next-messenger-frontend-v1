@@ -1,0 +1,143 @@
+import { useEffect, useState, useCallback } from 'react';
+import { getPusherClient } from '../lib/pusher';
+
+interface Msg {
+  id: string;
+  created_at: string | Date;
+  updated_at: string | Date;
+  conversation_id: string;
+  sender_id: string;
+  content: string;
+  type: string;
+  status: string;
+}
+
+interface Conversation {
+  conversation_id: string;
+  id: string;
+  name: string;
+  email: string;
+  latest_message: Msg | null;
+}
+
+interface ConversationUpdate {
+  conversation_id: string;
+  latestMessage: Msg;
+}
+
+export const useConversations = (userId?: string, token?: string) => {
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isConnected, setIsConnected] = useState(false);
+
+  const updateConversationWithMessage = useCallback((conversationId: string, message: Msg) => {
+    console.log('Updating conversation:', conversationId, 'with message:', message);
+    
+    setConversations(prev => {
+      const updated = prev.map(conv => {
+        if (conv.conversation_id === conversationId) {
+          // Handle cases where created_at might be null/undefined
+          const messageTime = message.created_at ? new Date(message.created_at).getTime() : Date.now();
+          const currentTime = conv.latest_message?.created_at ? 
+            new Date(conv.latest_message.created_at).getTime() : 0;
+          
+          const shouldUpdate = !conv.latest_message || messageTime > currentTime;
+          
+          if (shouldUpdate) {
+            console.log('Updating conversation', conversationId, 'from:', conv.latest_message, 'to:', message);
+            return {
+              ...conv,
+              latest_message: message
+            };
+          }
+        }
+        return conv;
+      });
+
+      // Sort by latest message timestamp, handling null values
+      return updated.sort((a, b) => {
+        const aTime = a.latest_message?.created_at ? 
+          new Date(a.latest_message.created_at).getTime() : 0;
+        const bTime = b.latest_message?.created_at ? 
+          new Date(b.latest_message.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
+    });
+  }, []);
+
+  const fetchConversations = useCallback(async () => {
+    if (!token) return;
+
+    setIsLoading(true);
+    try {
+      const response = await fetch('/api/users', {
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      
+      if (!response.ok) {
+        throw new Error('Failed to fetch conversations');
+      }
+      
+      const data = await response.json();
+      const sortedConversations = data.sort((a: Conversation, b: Conversation) => {
+        const aTime = a.latest_message ? new Date(a.latest_message.created_at).getTime() : 0;
+        const bTime = b.latest_message ? new Date(b.latest_message.created_at).getTime() : 0;
+        return bTime - aTime;
+      });
+      
+      setConversations(sortedConversations);
+    } catch (error) {
+      console.error('Error fetching conversations:', error);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  useEffect(() => {
+    if (!userId) return;
+
+    const pusher = getPusherClient();
+    const channelInstance = pusher.subscribe(`user.${userId}.conversations`);
+
+    pusher.connection.bind('connected', () => {
+      setIsConnected(true);
+    });
+
+    pusher.connection.bind('disconnected', () => {
+      setIsConnected(false);
+    });
+
+    pusher.connection.bind('error', () => {
+      setIsConnected(false);
+    });
+
+    channelInstance.bind('conversation-updated', (data: ConversationUpdate) => {
+      console.log('conversation-updated received', data);
+      updateConversationWithMessage(data.conversation_id, data.latestMessage);
+    });
+
+    return () => {
+      channelInstance.unbind('conversation-updated');
+      pusher.unsubscribe(`user.${userId}.conversations`);
+    };
+  }, [userId, updateConversationWithMessage]);
+
+  const refreshConversations = useCallback(() => {
+    fetchConversations();
+  }, [fetchConversations]);
+
+  return {
+    conversations,
+    isLoading,
+    isConnected,
+    refreshConversations,
+    updateConversationWithMessage
+  };
+};
