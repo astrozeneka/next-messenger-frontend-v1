@@ -39,8 +39,7 @@ export async function POST(request: NextRequest) {
       user: {
         id: user.id.toString(),
         name: user.name,
-        email: user.email,
-        public_key: user.public_key
+        email: user.email
       }
     });
 

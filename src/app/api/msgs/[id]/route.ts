@@ -31,7 +31,7 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             );
         }
 
-        if (existingMessage.sender_id != currentUser!.id) {
+        if (existingMessage.sender_id != currentUser!.id) { // Type error: This comparison appears to be unintentional because the types 'bigint' and 'string' have no overlap.
             return NextResponse.json(
                 { error: 'Unauthorized to edit this message' },
                 { status: 403 }

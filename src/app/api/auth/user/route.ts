@@ -29,8 +29,7 @@ export async function GET(request: NextRequest) {
         name: true,
         email: true,
         created_at: true,
-        updated_at: true,
-        public_key: true
+        updated_at: true
       }
     });
 

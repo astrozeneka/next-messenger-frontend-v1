@@ -113,25 +113,44 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const register = async (name: string, email: string, password: string) => {
     try {
-      const keyPair = await generateKeyPair();
-      
+      // Step 1: Register user without public key
       const response = await fetch('/api/auth/register', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({ name, email, password, publicKey: keyPair.publicKey }),
+        body: JSON.stringify({ name, email, password }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        storePrivateKey(keyPair.publicKey, keyPair.privateKey);
+        // Step 2: Set tokens and user data
         setToken(data.token);
         setRefreshToken(data.refreshToken);
         setUser(data.user);
         localStorage.setItem('token', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
+
+        // Step 3: Generate key pair and store public key
+        const keyPair = await generateKeyPair();
+        storePrivateKey(keyPair.publicKey, keyPair.privateKey);
+
+        // Step 4: Send public key to server
+        const publicKeyResponse = await fetch('/api/auth/public-keys', {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${data.token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ publicKey: keyPair.publicKey }),
+        });
+
+        if (!publicKeyResponse.ok) {
+          console.error('Failed to store public key on server');
+          // Don't fail registration for this, but log the error
+        }
+
         return { success: true };
       } else {
         return { success: false, error: data.error };

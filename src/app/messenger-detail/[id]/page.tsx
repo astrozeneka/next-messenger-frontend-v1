@@ -119,7 +119,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
     if (!remoteUser) return;
     if (!user?.public_key) return;
 
-    const userPrivateKey = getPrivateKey(user.public_key);
+    const userPrivateKey = getPrivateKey(user.public_key); // This is prone to error (see later)
     if (userPrivateKey) {
       setEncryptionKey(userPrivateKey);
       console.log('Private key loaded successfully');
@@ -256,7 +256,7 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
         console.log('File uploaded successfully:', key);
       }
 
-      const encryptedMessage = await encryptMessage(messageToSend, remoteUser.public_key);
+      const encryptedMessage = await encryptMessage(messageToSend, remoteUser.public_key); // Prone to error (see later)
       const response = await fetch('/api/msgs', {
         method: 'POST',
         headers: {

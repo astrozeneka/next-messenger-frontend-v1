@@ -20,8 +20,7 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
           select: {
             id: true,
             name: true,
-            email: true,
-            public_key: true
+            email: true
           }
         }
       }
