@@ -21,14 +21,12 @@ interface DecryptedMessageProps {
   message: Msg;
   encryptionKey: string | null;
   isReceived: boolean;
-  onEdit?: (messageId: string, newContent: string) => void;
+  onEditClick?: (message: Msg, decryptedContent: string) => void;
 }
 
-function DecryptedMessage({ message, encryptionKey, isReceived, onEdit }: DecryptedMessageProps) {
+function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: DecryptedMessageProps) {
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
-  const [isEditing, setIsEditing] = useState(false);
-  const [editContent, setEditContent] = useState('');
 
   useEffect(() => {
     const decrypt = async () => {
@@ -61,51 +59,10 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEdit }: Decryp
   }
 
   const handleEditClick = () => {
-    setEditContent(decryptedContent);
-    setIsEditing(true);
-  };
-
-  const handleSaveEdit = () => {
-    if (onEdit && editContent.trim() !== decryptedContent) {
-      onEdit(message.id, editContent.trim());
+    if (onEditClick) {
+      onEditClick(message, decryptedContent);
     }
-    setIsEditing(false);
   };
-
-  const handleCancelEdit = () => {
-    setIsEditing(false);
-    setEditContent('');
-  };
-
-  if (isEditing) {
-    return (
-      <div className="mb-2">
-        <span className="font-bold">REMOTE:</span>
-        <div className="mt-1">
-          <textarea
-            value={editContent}
-            onChange={(e) => setEditContent(e.target.value)}
-            className="w-full p-2 border border-gray-300 rounded text-sm"
-            rows={2}
-          />
-          <div className="flex gap-2 mt-1">
-            <button
-              onClick={handleSaveEdit}
-              className="px-2 py-1 bg-blue-500 text-white text-xs rounded hover:bg-blue-600"
-            >
-              Save
-            </button>
-            <button
-              onClick={handleCancelEdit}
-              className="px-2 py-1 bg-gray-500 text-white text-xs rounded hover:bg-gray-600"
-            >
-              Cancel
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className="mb-2">
@@ -146,6 +103,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     public_key: string | null;
   } | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
+  const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
 
   useEffect(() => {
     if (!token) return;
@@ -261,6 +219,12 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
 
     setIsSending(true);
 
+    // If editing, handle edit instead of send
+    if (editingMessage) {
+      await handleEditMessage(editingMessage.id, message.trim());
+      return;
+    }
+
     try {
       let messageToSend = message.trim();
 
@@ -348,6 +312,22 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     fileInput?.click();
   };
 
+  const handleStartEdit = (messageToEdit: Msg, decryptedContent: string) => {
+    setEditingMessage(messageToEdit);
+    setMessage(decryptedContent);
+    // Clear any selected file when starting to edit
+    setSelectedFile(null);
+    const fileInput = document.getElementById(`file-input-${conversationId}`) as HTMLInputElement;
+    if (fileInput) {
+      fileInput.value = '';
+    }
+  };
+
+  const handleCancelEdit = () => {
+    setEditingMessage(null);
+    setMessage('');
+  };
+
   const handleEditMessage = async (messageId: string, newContent: string) => {
     if (!remoteUser?.public_key || !token) {
       console.error('Remote user public key or token not available');
@@ -370,11 +350,15 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
       if (response.ok) {
         const data = await response.json();
         console.log('Message edited successfully:', data);
+        setEditingMessage(null);
+        setMessage('');
       } else {
         console.error('Error editing message:', response.statusText);
       }
     } catch (error) {
       console.error('Error editing message:', error);
+    } finally {
+      setIsSending(false);
     }
   };
 
@@ -403,7 +387,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
               message={msg}
               encryptionKey={encryptionKey}
               isReceived={msg.sender_id !== user?.id}
-              onEdit={handleEditMessage}
+              onEditClick={handleStartEdit}
             />
           </div>
         ))}
@@ -414,35 +398,59 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
       </div>
 
       <div className="border-t p-4">
+        {editingMessage && (
+          <div className="mb-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
+            <span className="font-medium">Editing message:</span> Click "Update" to save changes or "Cancel" to stop editing.
+          </div>
+        )}
         <div className="flex space-x-2">
           <input
             type="text"
             value={message}
             onChange={(e) => setMessage(e.target.value)}
-            placeholder="Type a message..."
-            className="flex-1 px-3 py-2 border border-gray-300 rounded-md"
+            placeholder={editingMessage ? "Edit your message..." : "Type a message..."}
+            className={`flex-1 px-3 py-2 border rounded-md ${
+              editingMessage 
+                ? 'border-yellow-400 bg-yellow-50' 
+                : 'border-gray-300'
+            }`}
           />
           <button
             onClick={handleMessageSend}
-            disabled={isSending}
+            disabled={isSending || (!message.trim() && !selectedFile)}
             className={`px-4 py-2 text-white rounded-md ${
-              isSending 
+              isSending || (!message.trim() && !selectedFile)
                 ? 'bg-gray-400 cursor-not-allowed' 
-                : 'bg-blue-600 hover:bg-blue-700'
+                : editingMessage
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-blue-600 hover:bg-blue-700'
             }`}
           >
-            {isSending ? 'Sending...' : 'Send'}
+            {isSending 
+              ? (editingMessage ? 'Updating...' : 'Sending...') 
+              : (editingMessage ? 'Update' : 'Send')
+            }
           </button>
-          <button
-            onClick={handleSendFileClick}
-            className={`px-4 py-2 text-white rounded-md ${
-              selectedFile
-                ? 'bg-orange-600 hover:bg-orange-700'
-                : 'bg-green-600 hover:bg-green-700'
-            }`}
-          >
-            {selectedFile ? 'File Selected' : 'Send File'}
-          </button>
+          {editingMessage && (
+            <button
+              onClick={handleCancelEdit}
+              className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
+            >
+              Cancel
+            </button>
+          )}
+          {!editingMessage && (
+            <button
+              onClick={handleSendFileClick}
+              className={`px-4 py-2 text-white rounded-md ${
+                selectedFile
+                  ? 'bg-orange-600 hover:bg-orange-700'
+                  : 'bg-green-600 hover:bg-green-700'
+              }`}
+            >
+              {selectedFile ? 'File Selected' : 'Send File'}
+            </button>
+          )}
         </div>
 
         <input
