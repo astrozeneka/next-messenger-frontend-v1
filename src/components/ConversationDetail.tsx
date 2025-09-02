@@ -75,6 +75,9 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
           (Edit)
         </button>
       )}
+      <span>
+        { encryptionKey }
+      </span>
     </div>
   );
 }
@@ -394,7 +397,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
           <div key={msg.id}>
             <DecryptedMessage
               message={msg}
-              encryptionKey={encryptionKey}
+              encryptionKey={user?.private_key!}
               isReceived={msg.sender_id !== user?.id}
               onEditClick={handleStartEdit}
             />
