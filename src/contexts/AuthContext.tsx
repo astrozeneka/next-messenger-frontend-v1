@@ -99,6 +99,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const data = await response.json();
 
       if (response.ok) {
+        console.log("User logged in", data);
+        const keys = data.publicKeys; // Expect to have at least 1 key stored {id: ..., publicKey: ...}
+        // Match if there is any of his public keys stored in localStorage
+        const privateKeys = JSON.parse(localStorage.getItem(`privateKeys`)! || '{}')
+        const matchedKey = keys.find((key: { id: string; publicKey: string }) =>
+          (privateKeys as { [publicKey: string]: string })[key.publicKey]
+        );
+
         // Step 2: Set authentication data
         setToken(data.token);
         setRefreshToken(data.refreshToken);
