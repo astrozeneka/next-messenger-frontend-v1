@@ -6,13 +6,13 @@ import { NextResponse } from "next/server";
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const body = await request.json();
-        const { conversation_id, content } = body;
+        const { conversation_id, content, public_key_id } = body;
         const currentUser = request.user;
 
         // Validate input
-        if (!conversation_id || !content) {
+        if (!conversation_id || !content || !public_key_id) {
             return NextResponse.json(
-                { error: 'Invalid input' },
+                { error: 'Invalid input: conversation_id, content, and public_key_id are required' },
                 { status: 400 }
             );
         }
@@ -23,6 +23,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 conversation_id,
                 sender_id: currentUser!.id,
                 content,
+                public_key_id: parseInt(public_key_id),
                 status: 'sent' // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
             }
         });
@@ -32,7 +33,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             ...entity,
             id: entity.id.toString(),
             conversation_id: entity.conversation_id.toString(),
-            sender_id: entity.sender_id.toString()
+            sender_id: entity.sender_id.toString(),
+            public_key_id: entity.public_key_id?.toString()
         })
 
         // For each conversation member
@@ -70,14 +72,16 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             
             const updatePayload = {
                 ...entity,
-                id: entity.id.toString(), // ???
+                id: entity.id.toString(),
                 conversation_id: entity.conversation_id.toString(),
                 sender_id: entity.sender_id.toString(),
+                public_key_id: entity.public_key_id?.toString(),
                 latestMessage: latestMessage ? {
                     id: latestMessage.id.toString(),
                     content: latestMessage.content,
                     created_at: latestMessage.created_at,
-                    sender_id: latestMessage.sender_id.toString()
+                    sender_id: latestMessage.sender_id.toString(),
+                    public_key_id: latestMessage.public_key_id?.toString()
                 } : null,
                 unread_count: unreadCount
             };
@@ -90,7 +94,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             ...entity,
             id: entity.id.toString(),
             conversation_id: entity.conversation_id.toString(),
-            sender_id: entity.sender_id.toString()
+            sender_id: entity.sender_id.toString(),
+            public_key_id: entity.public_key_id!.toString()
         });
     } catch (error) {
         console.error('Error processing message:', error);
@@ -142,6 +147,7 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             id: msg.id.toString(),
             conversation_id: msg.conversation_id.toString(),
             sender_id: msg.sender_id.toString(),
+            public_key_id: msg.public_key_id?.toString(),
             status: msg.status
         })));
     } catch (error) {

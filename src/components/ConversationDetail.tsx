@@ -100,7 +100,11 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     id: string;
     name: string;
     email: string;
-    public_key: string | null;
+    public_keys: Array<{
+      id: string;
+      public_key_value: string;
+      created_at: string | null;
+    }>;
   } | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
@@ -213,8 +217,8 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
   const handleMessageSend = async () => {
     if (!message.trim() && !selectedFile) return;
     
-    if (!remoteUser?.public_key) {
-      console.error('Remote user public key not available');
+    if (!remoteUser?.public_keys || remoteUser.public_keys.length === 0) {
+      console.error('Remote user public keys not available');
       return;
     }
 
@@ -267,31 +271,35 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         console.log('File uploaded successfully:', key);
       }
 
-      const encryptedMessage = await encryptMessage(messageToSend, remoteUser.public_key);
-      const response = await fetch('/api/msgs', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          conversation_id: conversationId,
-          content: encryptedMessage
-        })
-      });
+      for (const publicKey of remoteUser.public_keys) {
+        const encryptedMessage = await encryptMessage(messageToSend, publicKey.public_key_value);
+        const response = await fetch('/api/msgs', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            conversation_id: conversationId,
+            content: encryptedMessage,
+            public_key_id: publicKey.id
+          })
+        });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Message sent successfully:', data);
-        setMessage('');
-        setSelectedFile(null);
-        
-        const fileInput = document.getElementById(`file-input-${conversationId}`) as HTMLInputElement;
-        if (fileInput) {
-          fileInput.value = '';
+        if (response.ok) {
+          const data = await response.json();
+          console.log('Message sent successfully for key:', publicKey.id, data);
+        } else {
+          console.error('Error sending message for key:', publicKey.id, response.statusText);
         }
-      } else {
-        console.error('Error sending message:', response.statusText);
+      }
+      
+      setMessage('');
+      setSelectedFile(null);
+      
+      const fileInput = document.getElementById(`file-input-${conversationId}`) as HTMLInputElement;
+      if (fileInput) {
+        fileInput.value = '';
       }
     } catch (error) {
       console.error('Error sending message:', error);
@@ -330,13 +338,13 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
   };
 
   const handleEditMessage = async (messageId: string, newContent: string) => {
-    if (!remoteUser?.public_key || !token) {
-      console.error('Remote user public key or token not available');
+    if (!remoteUser?.public_keys || remoteUser.public_keys.length === 0 || !token) {
+      console.error('Remote user public keys or token not available');
       return;
     }
 
     try {
-      const encryptedMessage = await encryptMessage(newContent, remoteUser.public_key);
+      const encryptedMessage = await encryptMessage(newContent, remoteUser.public_keys[0].public_key_value);
       const response = await fetch(`/api/msgs/${messageId}`, {
         method: 'PUT',
         headers: {
