@@ -8,6 +8,7 @@ interface User {
   name: string;
   email: string;
   public_key: string;
+  private_key?: string;
 }
 
 interface AuthContextType {
@@ -168,18 +169,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       const data = await response.json();
 
       if (response.ok) {
-        // Step 2: Set tokens and user data
+        // Step 2: Set tokens first
         setToken(data.token);
         setRefreshToken(data.refreshToken);
-        setUser(data.user);
         localStorage.setItem('token', data.token);
         localStorage.setItem('refreshToken', data.refreshToken);
 
-        // Step 3: Generate key pair and store public key
+        // Step 3: Generate key pair and store locally
         const keyPair = await generateKeyPair();
         storePrivateKey(keyPair.publicKey, keyPair.privateKey);
 
-        // Step 4: Send public key to server
+        // Step 4: Create complete user object with private key
+        const completeUser = {
+          ...data.user,
+          private_key: keyPair.privateKey
+        };
+
+        // Step 5: Set user session with private key
+        setUser(completeUser);
+
+        // Step 6: Persist complete user data to localStorage
+        localStorage.setItem('userData', JSON.stringify(completeUser));
+
+        // Step 7: Send public key to server (non-blocking for user experience)
         const publicKeyResponse = await fetch('/api/auth/public-keys', {
           method: 'POST',
           headers: {
@@ -191,7 +203,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (!publicKeyResponse.ok) {
           console.error('Failed to store public key on server');
-          // Don't fail registration for this, but log the error
+          // Don't fail registration - user already has working session
+        } else {
+          console.log('Public key stored on server successfully');
         }
 
         return { success: true };
