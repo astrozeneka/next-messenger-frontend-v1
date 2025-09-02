@@ -58,6 +58,8 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUser = async (authToken: string) => {
     try {
+      let locallySavedUser = await localStorage.getItem('userData');
+      if (!locallySavedUser) throw new Error("No user data in localStorage");
       const response = await fetch('/api/auth/user', {
         headers: {
           'Authorization': `Bearer ${authToken}`,
@@ -67,10 +69,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (response.ok) {
         const data = await response.json();
-        setUser(data.user);
+        setUser({
+          ...JSON.parse(locallySavedUser),
+          ...data.user
+        });
       } else {
         localStorage.removeItem('token');
         localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
         setToken(null);
         setRefreshToken(null);
       }
@@ -78,6 +84,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       console.error('Error fetching user:', error);
       localStorage.removeItem('token');
       localStorage.removeItem('refreshToken');
+        localStorage.removeItem('userData');
       setToken(null);
       setRefreshToken(null);
     } finally {
@@ -101,11 +108,11 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       if (response.ok) {
         console.log("User logged in", data);
         const keys = data.publicKeys; // Expect to have at least 1 key stored {id: ..., publicKey: ...}
-        // Match if there is any of his public keys stored in localStorage
-        const privateKeys = JSON.parse(localStorage.getItem(`privateKeys`)! || '{}')
+        // Match if there is any of his public keys stored in localStorage (the code below can be used as well)
+        /*const privateKeys = JSON.parse(localStorage.getItem(`privateKeys`)! || '{}')
         const matchedKey = keys.find((key: { id: string; publicKey: string }) =>
           (privateKeys as { [publicKey: string]: string })[key.publicKey]
-        );
+        );*/
 
         // Step 2: Set authentication data
         setToken(data.token);
@@ -120,11 +127,15 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         console.log("Retrieve public keys from the server", serverPublicKeys)
 
         // Check if any server public key matches our local private keys
+        let currentPrivateKey:string;
+        let currentPublicKey:{id:string, publicKey:string};
         for (const serverKey of serverPublicKeys) {
-          const privateKey = getPrivateKey(serverKey.publicKey);
-          if (privateKey) {
-            console.log('Found matching key pair for login');
+          let pk = getPrivateKey(serverKey.publicKey);
+          if (pk) {
+            console.log('Found matching key pair for login', serverKey);
             hasMatchingKey = true;
+            currentPrivateKey = pk;
+            currentPublicKey = serverKey;
             break;
           }
         }
@@ -134,6 +145,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           console.log('No existing keys found, generating new key pair');
           
           const keyPair = await generateKeyPair();
+          currentPrivateKey = keyPair.privateKey;
           storePrivateKey(keyPair.publicKey, keyPair.privateKey);
 
           // Send new public key to server
@@ -148,11 +160,24 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           if (!publicKeyResponse.ok) {
             console.error('Failed to store new public key on server');
-            // Don't fail login for this, but log the error
+            return;
+          } else {
+            const responseData = await publicKeyResponse.json();
+            currentPublicKey = responseData.public_key as { id: string; publicKey: string };
           }
         } else {
           console.log("The user have matched a key pair, no need to generate")
         }
+
+        console.log("Key pair", currentPrivateKey!, currentPublicKey!)
+        // Persist the user data
+        const completeUser = {
+          ...data.user,
+          private_key: currentPrivateKey!,
+          public_key: currentPublicKey!
+        };
+        await localStorage.setItem('userData', JSON.stringify(completeUser));
+        setUser(completeUser);
 
         return { success: true };
       } else {
@@ -187,18 +212,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         const keyPair = await generateKeyPair();
         storePrivateKey(keyPair.publicKey, keyPair.privateKey);
 
-        // Step 4: Create complete user object with private key
-        const completeUser = {
-          ...data.user,
-          private_key: keyPair.privateKey
-        };
-
-        // Step 5: Set user session with private key
-        setUser(completeUser);
-
-        // Step 6: Persist complete user data to localStorage
-        localStorage.setItem('userData', JSON.stringify(completeUser));
-
         // Step 7: Send public key to server (non-blocking for user experience)
         const publicKeyResponse = await fetch('/api/auth/public-keys', {
           method: 'POST',
@@ -208,13 +221,29 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           },
           body: JSON.stringify({ publicKey: keyPair.publicKey }),
         });
+        const publicKeyResponseData = await publicKeyResponse.json();
 
         if (!publicKeyResponse.ok) {
           console.error('Failed to store public key on server');
+          return;
           // Don't fail registration - user already has working session
         } else {
           console.log('Public key stored on server successfully');
         }
+
+        // Step 4: Create complete user object with private key
+        const completeUser = {
+          ...data.user,
+          private_key: keyPair.privateKey,
+          public_key: publicKeyResponseData.public_key
+        };
+        console.log(completeUser)
+
+        // Step 5: Set user session with private key
+        setUser(completeUser);
+
+        // Step 6: Persist complete user data to localStorage
+        localStorage.setItem('userData', JSON.stringify(completeUser));
 
         return { success: true };
       } else {
@@ -264,6 +293,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
     setRefreshToken(null);
     localStorage.removeItem('token');
     localStorage.removeItem('refreshToken');
+    localStorage.removeItem('userData');
   };
 
   const value = {

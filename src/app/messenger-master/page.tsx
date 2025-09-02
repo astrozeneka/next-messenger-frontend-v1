@@ -105,7 +105,8 @@ export default function MessengerMaster() {
       console.log('Private key loaded successfully');
     } else {
       console.error('Private key not found in localStorage');
-      router.push('/login');
+      console.warn('The error above is deprecated');
+      // router.push('/login');
     }
   }, [user, router]);
 

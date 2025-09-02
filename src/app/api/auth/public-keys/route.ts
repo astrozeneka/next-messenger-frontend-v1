@@ -49,7 +49,11 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
 
     return NextResponse.json({
       message: 'Public key stored successfully',
-      publicKeyId: newPublicKey.id.toString()
+      publicKeyId: newPublicKey.id.toString(),
+      public_key: {
+        id: newPublicKey.id.toString(),
+        publicKey: newPublicKey.public_key_value
+      }
     });
 
   } catch (error) {
