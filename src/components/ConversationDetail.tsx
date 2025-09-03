@@ -75,9 +75,6 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
           (Edit)
         </button>
       )}
-      <span>
-        { encryptionKey }
-      </span>
     </div>
   );
 }
@@ -156,7 +153,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
 
     const loadMessages = async () => {
       try {
-        const response = await fetch(`/api/msgs?conversation_id=${conversationId}`, {
+        const response = await fetch(`/api/msgs?conversation_id=${conversationId}&public_key_id=${(user?.public_key as any).id}`, {
           headers: {
             Authorization: `Bearer ${token}`,
             'Accept': 'application/json'
@@ -274,8 +271,9 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         console.log('File uploaded successfully:', key);
       }
 
-      for (const publicKey of remoteUser.public_keys) {
-        const encryptedMessage = await encryptMessage(messageToSend, publicKey.public_key_value);
+      console.log("Public key list", [...remoteUser.public_keys, user?.public_key!])
+      for (const publicKey of [...remoteUser.public_keys, user?.public_key!]) {
+        const encryptedMessage = await encryptMessage(messageToSend, (publicKey as any).public_key_value);
         const response = await fetch('/api/msgs', {
           method: 'POST',
           headers: {

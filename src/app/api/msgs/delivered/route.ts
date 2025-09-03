@@ -115,7 +115,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     ...msg,
                     id: msg.id.toString(),
                     conversation_id: msg.conversation_id.toString(),
-                    sender_id: msg.sender_id.toString()
+                    sender_id: msg.sender_id.toString(),
+                    public_key_id: msg.public_key_id.toString()
                 });
             }
         }

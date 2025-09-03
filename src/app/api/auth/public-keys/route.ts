@@ -52,7 +52,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
       publicKeyId: newPublicKey.id.toString(),
       public_key: {
         id: newPublicKey.id.toString(),
-        publicKey: newPublicKey.public_key_value
+        public_key_value: newPublicKey.public_key_value
       }
     });
 

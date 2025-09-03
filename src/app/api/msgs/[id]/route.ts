@@ -52,7 +52,8 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             ...updatedMessage,
             id: updatedMessage.id.toString(),
             conversation_id: updatedMessage.conversation_id.toString(),
-            sender_id: updatedMessage.sender_id.toString()
+            sender_id: updatedMessage.sender_id.toString(),
+            public_key_id: updatedMessage.public_key_id.toString()
         });
 
         // Check if message is the last of the conversation
@@ -100,7 +101,8 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             ...updatedMessage,
             id: updatedMessage.id.toString(),
             conversation_id: updatedMessage.conversation_id.toString(),
-            sender_id: updatedMessage.sender_id.toString()
+            sender_id: updatedMessage.sender_id.toString(),
+            public_key_id: updatedMessage.public_key_id.toString()
         });
     } catch (error) {
         console.error('Error updating message:', error);

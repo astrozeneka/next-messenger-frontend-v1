@@ -52,7 +52,7 @@ export async function POST(request: NextRequest) {
       },
       publicKeys: user.public_keys.map(key => ({
         id: key.id.toString(),
-        publicKey: key.public_key_value,
+        public_key_value: key.public_key_value,
         createdAt: key.created_at
       }))
     });

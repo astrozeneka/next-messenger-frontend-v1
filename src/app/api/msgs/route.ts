@@ -110,6 +110,7 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const url = new URL(request.url);
         const conversation_id = url.searchParams.get('conversation_id');
+        const public_key_id = url.searchParams.get('public_key_id');
         const currentUser = request.user;
 
         // Validate input
@@ -132,7 +133,8 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         // Fetch messages for the conversation
         const messages = await prisma.msgs.findMany({
             where: {
-                conversation_id: conversationIdNum
+                conversation_id: conversationIdNum,
+                public_key_id: public_key_id
             },
             orderBy: {
                 created_at: 'asc'

@@ -107,7 +107,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
       if (response.ok) {
         console.log("User logged in", data);
-        const keys = data.publicKeys; // Expect to have at least 1 key stored {id: ..., publicKey: ...}
+        // const keys = data.publicKeys; // Expect to have at least 1 key stored {id: ..., publicKey: ...}
         // Match if there is any of his public keys stored in localStorage (the code below can be used as well)
         /*const privateKeys = JSON.parse(localStorage.getItem(`privateKeys`)! || '{}')
         const matchedKey = keys.find((key: { id: string; publicKey: string }) =>
@@ -128,9 +128,9 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         // Check if any server public key matches our local private keys
         let currentPrivateKey:string;
-        let currentPublicKey:{id:string, publicKey:string};
+        let currentPublicKey:{id:string, public_key_value:string};
         for (const serverKey of serverPublicKeys) {
-          let pk = getPrivateKey(serverKey.publicKey);
+          let pk = getPrivateKey(serverKey.public_key_value);
           if (pk) {
             console.log('Found matching key pair for login', serverKey);
             hasMatchingKey = true;
@@ -163,7 +163,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
             return;
           } else {
             const responseData = await publicKeyResponse.json();
-            currentPublicKey = responseData.public_key as { id: string; publicKey: string };
+            currentPublicKey = responseData.public_key as { id: string; public_key_value: string };
           }
         } else {
           console.log("The user have matched a key pair, no need to generate")
