@@ -79,7 +79,9 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         });
 
         // 3.B Calculate unread count (messages from other users that are not 'read')
-        const unreadCount = await prisma.msgs.count({
+        // Group by batch_id to avoid counting same message multiple times due to encryption per public key
+        const unreadBatches = await prisma.msgs.groupBy({
+          by: ['batch_id'],
           where: {
             conversation_id: parseInt(conversationId),
             sender_id: {
@@ -87,9 +89,13 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             },
             status: {
               in: ['sent', 'delivered']
+            },
+            batch_id: {
+              not: null
             }
           }
         });
+        const unreadCount = unreadBatches.length;
 
         return {
           ...user,

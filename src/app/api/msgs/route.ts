@@ -89,7 +89,9 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             });
 
             // Calculate unread count for this specific user
-            const unreadCount = await prisma.msgs.count({
+            // Group by batch_id to avoid counting same message multiple times due to encryption per public key
+            const unreadBatches = await prisma.msgs.groupBy({
+                by: ['batch_id'],
                 where: {
                     conversation_id: conversation_id,
                     sender_id: {
@@ -97,9 +99,13 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     },
                     status: {
                         in: ['sent', 'delivered']
+                    },
+                    batch_id: {
+                        not: null
                     }
                 }
             });
+            const unreadCount = unreadBatches.length;
 
             const remoteId = cm.user_id;
             console.log("Trigger 'conversation updated' to", `user.${remoteId}.conversations`);
