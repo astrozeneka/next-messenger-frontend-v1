@@ -36,12 +36,33 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             );
         }
 
-        // Update messages status to 'read' 
-        // Only for messages not sent by current user and currently in 'delivered' or 'sent' status
-        const updateResult = await prisma.msgs.updateMany({
+        // Get the batch_ids of the messages to be marked as read
+        const messagesToRead = await prisma.msgs.findMany({
             where: {
                 id: {
                     in: messageIdsNum
+                },
+                conversation_id: conversationIdNum,
+                sender_id: {
+                    not: currentUser!.id
+                },
+                status: {
+                    in: ['sent', 'delivered']
+                }
+            },
+            select: {
+                batch_id: true
+            }
+        });
+
+        // Get unique batch_ids
+        const batchIds = [...new Set(messagesToRead.map(msg => msg.batch_id).filter(id => id !== null))];
+        
+        // Update all messages in these batches to 'read' status
+        const updateResult = await prisma.msgs.updateMany({
+            where: {
+                batch_id: {
+                    in: batchIds
                 },
                 conversation_id: conversationIdNum,
                 sender_id: {
@@ -60,11 +81,11 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
 
         // If messages were updated to 'read', send Pusher notifications
         if (updateResult.count > 0) {
-            // Get the updated messages to send in notifications
+            // Get all updated messages from the affected batches to send in notifications
             const updatedMessages = await prisma.msgs.findMany({
                 where: {
-                    id: {
-                        in: messageIdsNum
+                    batch_id: {
+                        in: batchIds
                     },
                     conversation_id: conversationIdNum,
                     status: 'read'
@@ -82,7 +103,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     id: msg.id.toString(),
                     conversation_id: msg.conversation_id.toString(),
                     sender_id: msg.sender_id.toString(),
-                    public_key_id: msg.public_key_id?.toString()
+                    public_key_id: msg.public_key_id?.toString(),
+                    batch_id: msg.batch_id
                 });
             }
         }
@@ -90,7 +112,9 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         return NextResponse.json({
             success: true,
             updated_count: updateResult.count,
-            message: `${updateResult.count} messages marked as read`
+            batches_affected: batchIds.length,
+            batch_ids: batchIds,
+            message: `${updateResult.count} messages from ${batchIds.length} batches marked as read`
         });
     } catch (error) {
         console.error('Error marking messages as read:', error);

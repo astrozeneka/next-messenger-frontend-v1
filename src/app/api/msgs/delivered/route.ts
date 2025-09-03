@@ -31,7 +31,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         let updateResult;
 
         if (message_ids && Array.isArray(message_ids) && message_ids.length > 0) {
-            // Specific messages mode: mark only specified messages as delivered
+            // Specific messages mode: mark entire batches as delivered
             const messageIdsNum = message_ids.map(id => parseInt(id.toString()));
 
             // Validate conversions
@@ -42,10 +42,31 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 );
             }
 
-            updateResult = await prisma.msgs.updateMany({
+            // Get the batch_ids of the messages to be marked as delivered
+            const messagesToDeliver = await prisma.msgs.findMany({
                 where: {
                     id: {
                         in: messageIdsNum
+                    },
+                    conversation_id: conversationIdNum,
+                    sender_id: {
+                        not: currentUser!.id
+                    },
+                    status: 'sent'
+                },
+                select: {
+                    batch_id: true
+                }
+            });
+
+            // Get unique batch_ids
+            const batchIds = [...new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null))];
+            
+            // Update all messages in these batches to 'delivered' status
+            updateResult = await prisma.msgs.updateMany({
+                where: {
+                    batch_id: {
+                        in: batchIds
                     },
                     conversation_id: conversationIdNum,
                     sender_id: {
@@ -81,11 +102,29 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             let whereClause;
             
             if (message_ids && Array.isArray(message_ids) && message_ids.length > 0) {
-                // Specific messages mode
+                // Specific messages mode - get messages from affected batches
                 const messageIdsNum = message_ids.map(id => parseInt(id.toString()));
+                const messagesToDeliver = await prisma.msgs.findMany({
+                    where: {
+                        id: {
+                            in: messageIdsNum
+                        },
+                        conversation_id: conversationIdNum,
+                        sender_id: {
+                            not: currentUser!.id
+                        },
+                        status: 'delivered'
+                    },
+                    select: {
+                        batch_id: true
+                    }
+                });
+
+                const batchIds = [...new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null))];
+                
                 whereClause = {
-                    id: {
-                        in: messageIdsNum
+                    batch_id: {
+                        in: batchIds
                     },
                     conversation_id: conversationIdNum,
                     status: 'delivered'
@@ -116,16 +155,49 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     id: msg.id.toString(),
                     conversation_id: msg.conversation_id.toString(),
                     sender_id: msg.sender_id.toString(),
-                    public_key_id: msg.public_key_id.toString()
+                    public_key_id: msg.public_key_id?.toString(),
+                    batch_id: msg.batch_id
                 });
             }
         }
 
-        return NextResponse.json({
+        // Prepare response with batch information if applicable
+        let responseData: any = {
             success: true,
             updated_count: updateResult.count,
             message: `${updateResult.count} messages marked as delivered`
-        });
+        };
+
+        // Add batch information for specific messages mode
+        if (message_ids && Array.isArray(message_ids) && message_ids.length > 0) {
+            const messageIdsNum = message_ids.map(id => parseInt(id.toString()));
+            const messagesToDeliver = await prisma.msgs.findMany({
+                where: {
+                    id: {
+                        in: messageIdsNum
+                    },
+                    conversation_id: conversationIdNum,
+                    sender_id: {
+                        not: currentUser!.id
+                    },
+                    status: 'delivered'
+                },
+                select: {
+                    batch_id: true
+                }
+            });
+
+            const batchIds = [...new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null))];
+            
+            responseData = {
+                ...responseData,
+                batches_affected: batchIds.length,
+                batch_ids: batchIds,
+                message: `${updateResult.count} messages from ${batchIds.length} batches marked as delivered`
+            };
+        }
+
+        return NextResponse.json(responseData);
     } catch (error) {
         console.error('Error marking messages as delivered:', error);
         return NextResponse.json(

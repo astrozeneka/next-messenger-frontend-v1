@@ -111,6 +111,7 @@ model conversations {
 
 model msgs {
   id              BigInt        @id @default(autoincrement()) @db.UnsignedBigInt
+  batch_id        Int?          @db.UnsignedInt
   created_at      DateTime?     @db.Timestamp(0)
   updated_at      DateTime?     @db.Timestamp(0)
   conversation_id BigInt        @db.UnsignedBigInt
@@ -126,6 +127,7 @@ model msgs {
   @@index([conversation_id, created_at], map: "msgs_conversation_id_created_at_index")
   @@index([sender_id], map: "msgs_sender_id_foreign")
   @@index([public_key_id], map: "msgs_public_key_id_foreign")
+  @@index([batch_id], map: "msgs_batch_id_index")
 }
 
 model public_keys {

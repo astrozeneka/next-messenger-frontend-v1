@@ -27,6 +27,18 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             }
         }
 
+        // Get the next incremental batch_id
+        const lastMessage = await prisma.msgs.findFirst({
+            orderBy: {
+                batch_id: 'desc'
+            },
+            select: {
+                batch_id: true
+            }
+        });
+        
+        const batchId = (lastMessage?.batch_id || 0) + 1;
+        
         // Create all messages in a transaction
         const entities = await prisma.$transaction(async (tx) => {
             const createdMessages = [];
@@ -37,6 +49,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                         sender_id: currentUser!.id,
                         content: msg.content,
                         public_key_id: parseInt(msg.public_key_id),
+                        batch_id: batchId,
                         status: 'sent' // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
                     }
                 });
@@ -52,7 +65,8 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 id: entity.id.toString(),
                 conversation_id: entity.conversation_id.toString(),
                 sender_id: entity.sender_id.toString(),
-                public_key_id: entity.public_key_id?.toString()
+                public_key_id: entity.public_key_id?.toString(),
+                batch_id: entity.batch_id
             });
         }
 
@@ -98,12 +112,14 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 conversation_id: firstEntity.conversation_id.toString(),
                 sender_id: firstEntity.sender_id.toString(),
                 public_key_id: firstEntity.public_key_id?.toString(),
+                batch_id: firstEntity.batch_id,
                 latestMessage: latestMessage ? {
                     id: latestMessage.id.toString(),
                     content: latestMessage.content,
                     created_at: latestMessage.created_at,
                     sender_id: latestMessage.sender_id.toString(),
-                    public_key_id: latestMessage.public_key_id?.toString()
+                    public_key_id: latestMessage.public_key_id?.toString(),
+                    batch_id: latestMessage.batch_id
                 } : null,
                 unread_count: unreadCount
             };
@@ -113,13 +129,15 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         
         return NextResponse.json({
             success: true,
+            batch_id: batchId,
             messages_created: entities.length,
             messages: entities.map(entity => ({
                 ...entity,
                 id: entity.id.toString(),
                 conversation_id: entity.conversation_id.toString(),
                 sender_id: entity.sender_id.toString(),
-                public_key_id: entity.public_key_id!.toString()
+                public_key_id: entity.public_key_id!.toString(),
+                batch_id: entity.batch_id
             }))
         });
     } catch (error) {
@@ -180,6 +198,7 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             conversation_id: msg.conversation_id.toString(),
             sender_id: msg.sender_id.toString(),
             public_key_id: msg.public_key_id?.toString(),
+            batch_id: msg.batch_id,
             status: msg.status
         })));
     } catch (error) {
