@@ -89,7 +89,8 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
     `conversation.${conversationId}`,
     user?.id,
     token || undefined,
-    conversationId
+    conversationId,
+    (user?.public_key as any)?.id
   );
   //const { updateUnreadCount } = useConversations(user?.id, token || undefined);
 

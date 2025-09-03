@@ -10,6 +10,7 @@ interface Msg {
   content: string;
   type: string;
   status: string;
+  public_key_id?: string;
 }
 
 interface Conversation {
@@ -27,7 +28,7 @@ interface ConversationUpdate {
   unread_count: number;
 }
 
-export const useConversations = (userId?: string, token?: string) => {
+export const useConversations = (userId?: string, token?: string, publicKeyId?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
@@ -123,7 +124,11 @@ export const useConversations = (userId?: string, token?: string) => {
 
     channelInstance.bind('conversation-updated', (data: ConversationUpdate) => {
       console.log('conversation-updated received', data);
-      updateConversationWithMessage(data.conversation_id, data.latestMessage, data.unread_count);
+      
+      // Only process messages that match the user's public_key_id
+      if (!publicKeyId || data.latestMessage.public_key_id === publicKeyId) {
+        updateConversationWithMessage(data.conversation_id, data.latestMessage, data.unread_count);
+      }
     });
 
     return () => {

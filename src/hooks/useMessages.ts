@@ -10,12 +10,13 @@ interface Msg {
   content: string;
   type: string;
   status: string;
+  public_key_id?: string;
 }
 
 /**
  * The channel-id should be the user-id
  */
-export const useMessages = (channel: string = 'chat', currentUserId?: string, token?: string, conversationId?: string) => {
+export const useMessages = (channel: string = 'chat', currentUserId?: string, token?: string, conversationId?: string, publicKeyId?: string) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -98,19 +99,28 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
 
     // Listen to message events
     channelInstance.bind('message-sent', (data: Msg) => {
-      // For real-time messages, check if read acknowledgment is needed
-      addOrUpdateMessage(data, true);
+      // Only process messages that match the user's public_key_id
+      if (!publicKeyId || data.public_key_id === publicKeyId) {
+        // For real-time messages, check if read acknowledgment is needed
+        addOrUpdateMessage(data, true);
+      }
     });
 
     channelInstance.bind('message-updated', (data: Msg) => {
-      // For updated messages, check if read acknowledgment is needed
-      addOrUpdateMessage(data, true);
+      // Only process messages that match the user's public_key_id
+      if (!publicKeyId || data.public_key_id === publicKeyId) {
+        // For updated messages, check if read acknowledgment is needed
+        addOrUpdateMessage(data, true);
+      }
     });
 
     // Listen to message status updates (from read acknowledgments)
     channelInstance.bind('message-status-updated', (data: Msg) => {
-      // For status updates, don't trigger read acknowledgment to avoid loops
-      addOrUpdateMessage(data, false);
+      // Only process messages that match the user's public_key_id
+      if (!publicKeyId || data.public_key_id === publicKeyId) {
+        // For status updates, don't trigger read acknowledgment to avoid loops
+        addOrUpdateMessage(data, false);
+      }
     });
 
     return () => {
