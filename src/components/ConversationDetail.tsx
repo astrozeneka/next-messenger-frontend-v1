@@ -273,29 +273,37 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
       }
 
       console.log("Public key list", [...remoteUser.public_keys, user?.public_key!])
+      
+      // Encrypt message for each public key and prepare data for batch send
+      const encryptedMessages = [];
       for (const publicKey of [...remoteUser.public_keys, user?.public_key!]) {
         const encryptedMessage = await encryptMessage(messageToSend, (publicKey as any).public_key_value);
-        const response = await fetch('/api/msgs', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`
-          },
-          body: JSON.stringify({
-            conversation_id: conversationId,
-            content: encryptedMessage,
-            public_key_id: publicKey.id
-          })
+        encryptedMessages.push({
+          public_key_id: (publicKey as any).id,
+          content: encryptedMessage
         });
-
-        if (response.ok) {
-          const data = await response.json();
-          console.log('Message sent successfully for key:', publicKey.id, data);
-        } else {
-          console.error('Error sending message for key:', publicKey.id, response.statusText);
-        }
       }
-      
+
+      // Send all encrypted messages in one request
+      const response = await fetch('/api/msgs', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify({
+          conversation_id: conversationId,
+          messages: encryptedMessages
+        })
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('Message sent successfully:', data);
+      } else {
+        console.error('Error sending message:', response.statusText);
+      }
+
       setMessage('');
       setSelectedFile(null);
       

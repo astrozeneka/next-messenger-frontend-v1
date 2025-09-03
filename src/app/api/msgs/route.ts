@@ -6,43 +6,63 @@ import { NextResponse } from "next/server";
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const body = await request.json();
-        const { conversation_id, content, public_key_id } = body;
+        const { conversation_id, messages } = body;
         const currentUser = request.user;
 
         // Validate input
-        if (!conversation_id || !content || !public_key_id) {
+        if (!conversation_id || !messages || !Array.isArray(messages) || messages.length === 0) {
             return NextResponse.json(
-                { error: 'Invalid input: conversation_id, content, and public_key_id are required' },
+                { error: 'Invalid input: conversation_id and messages array are required' },
                 { status: 400 }
             );
         }
 
-        // Save the message as an entity
-        const entity = await prisma.msgs.create({
-            data: {
-                conversation_id,
-                sender_id: currentUser!.id,
-                content,
-                public_key_id: parseInt(public_key_id),
-                status: 'sent' // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
+        // Validate each message in the array
+        for (const msg of messages) {
+            if (!msg.content || !msg.public_key_id) {
+                return NextResponse.json(
+                    { error: 'Invalid message: content and public_key_id are required for each message' },
+                    { status: 400 }
+                );
             }
+        }
+
+        // Create all messages in a transaction
+        const entities = await prisma.$transaction(async (tx) => {
+            const createdMessages = [];
+            for (const msg of messages) {
+                const entity = await tx.msgs.create({
+                    data: {
+                        conversation_id,
+                        sender_id: currentUser!.id,
+                        content: msg.content,
+                        public_key_id: parseInt(msg.public_key_id),
+                        status: 'sent' // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
+                    }
+                });
+                createdMessages.push(entity);
+            }
+            return createdMessages;
         });
 
-        // Broadcast to everyone
-        await pusher.trigger(`conversation.${conversation_id}`, 'message-updated', {
-            ...entity,
-            id: entity.id.toString(),
-            conversation_id: entity.conversation_id.toString(),
-            sender_id: entity.sender_id.toString(),
-            public_key_id: entity.public_key_id?.toString()
-        })
+        // Broadcast each message to conversation channel
+        for (const entity of entities) {
+            await pusher.trigger(`conversation.${conversation_id}`, 'message-updated', {
+                ...entity,
+                id: entity.id.toString(),
+                conversation_id: entity.conversation_id.toString(),
+                sender_id: entity.sender_id.toString(),
+                public_key_id: entity.public_key_id?.toString()
+            });
+        }
 
-        // For each conversation member
+        // For each conversation member, update conversation list
         const conversation_members = await prisma.conversation_members.findMany({
             where: {
                 conversation_id: conversation_id
             }
-        })
+        });
+        
         for (const cm of conversation_members || []) {
             // Retrieve the last message
             const latestMessage = await prisma.msgs.findFirst({
@@ -68,14 +88,16 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             });
 
             const remoteId = cm.user_id;
-            console.log("Trigger 'conversation updated' to", `user.${remoteId}.conversations`)
+            console.log("Trigger 'conversation updated' to", `user.${remoteId}.conversations`);
             
+            // Use the first entity for the conversation update (they all have same metadata)
+            const firstEntity = entities[0];
             const updatePayload = {
-                ...entity,
-                id: entity.id.toString(),
-                conversation_id: entity.conversation_id.toString(),
-                sender_id: entity.sender_id.toString(),
-                public_key_id: entity.public_key_id?.toString(),
+                ...firstEntity,
+                id: firstEntity.id.toString(),
+                conversation_id: firstEntity.conversation_id.toString(),
+                sender_id: firstEntity.sender_id.toString(),
+                public_key_id: firstEntity.public_key_id?.toString(),
                 latestMessage: latestMessage ? {
                     id: latestMessage.id.toString(),
                     content: latestMessage.content,
@@ -89,13 +111,16 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', updatePayload);
         }
         
-
         return NextResponse.json({
-            ...entity,
-            id: entity.id.toString(),
-            conversation_id: entity.conversation_id.toString(),
-            sender_id: entity.sender_id.toString(),
-            public_key_id: entity.public_key_id!.toString()
+            success: true,
+            messages_created: entities.length,
+            messages: entities.map(entity => ({
+                ...entity,
+                id: entity.id.toString(),
+                conversation_id: entity.conversation_id.toString(),
+                sender_id: entity.sender_id.toString(),
+                public_key_id: entity.public_key_id!.toString()
+            }))
         });
     } catch (error) {
         console.error('Error processing message:', error);
@@ -131,11 +156,16 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         }
 
         // Fetch messages for the conversation
+        const whereClause: any = {
+            conversation_id: conversationIdNum
+        };
+        
+        if (public_key_id) {
+            whereClause.public_key_id = parseInt(public_key_id);
+        }
+        
         const messages = await prisma.msgs.findMany({
-            where: {
-                conversation_id: conversationIdNum,
-                public_key_id: public_key_id
-            },
+            where: whereClause,
             orderBy: {
                 created_at: 'asc'
             }
