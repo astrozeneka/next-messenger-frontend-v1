@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getPusherClient } from '../lib/pusher';
+import { useAuth } from '@/contexts/AuthContext';
 
 interface Msg {
   id: string;
@@ -28,10 +29,11 @@ interface ConversationUpdate {
   unread_count: number;
 }
 
-export const useConversations = (userId?: string, token?: string, publicKeyId?: string) => {
+export const useConversations = (userId?: string, token?: string) => {
   const [conversations, setConversations] = useState<Conversation[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isConnected, setIsConnected] = useState(false);
+  const {user} = useAuth();
 
   const updateConversationWithMessage = useCallback((conversationId: string, message: Msg, unreadCount?: number) => {
     console.log('Updating conversation:', conversationId, 'with message:', message, 'unread_count:', unreadCount);
@@ -70,15 +72,15 @@ export const useConversations = (userId?: string, token?: string, publicKeyId?: 
   }, []);
 
   const fetchConversations = useCallback(async () => {
-    if (!token) return;
+    if (!token || !user) return;
 
     setIsLoading(true);
     try {
-      const response = await fetch('/api/users', {
+      const response = await fetch('/api/users?public_key_id=' + (user?.public_key as any).id, {
         headers: {
           'Authorization': `Bearer ${token}`,
           'Content-Type': 'application/json',
-        },
+        }
       });
       
       if (!response.ok) {
@@ -98,7 +100,7 @@ export const useConversations = (userId?: string, token?: string, publicKeyId?: 
     } finally {
       setIsLoading(false);
     }
-  }, [token]);
+  }, [token, user]);
 
   useEffect(() => {
     fetchConversations();
@@ -124,9 +126,9 @@ export const useConversations = (userId?: string, token?: string, publicKeyId?: 
 
     channelInstance.bind('conversation-updated', (data: ConversationUpdate) => {
       console.log('conversation-updated received', data);
-      
+      console.log('self is ', (user?.public_key as any).id)
       // Only process messages that match the user's public_key_id
-      if (!publicKeyId || data.latestMessage.public_key_id === publicKeyId) {
+      if (!(user?.public_key as any) || data.latestMessage.public_key_id === (user?.public_key as any).id) {
         updateConversationWithMessage(data.conversation_id, data.latestMessage, data.unread_count);
       }
     });

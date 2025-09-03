@@ -77,17 +77,17 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             }
         });
         
-        for (const cm of conversation_members || []) {
-            // Retrieve the last message
-            const latestMessage = await prisma.msgs.findFirst({
-                where: {
-                    conversation_id: conversation_id
-                },
-                orderBy: {
-                    created_at: 'desc'
-                }
-            });
+        // Get the latest batch in this conversation
+        const latestBatchMessage = await prisma.msgs.findFirst({
+            where: {
+                conversation_id: conversation_id
+            },
+            orderBy: {
+                batch_id: 'desc'
+            }
+        });
 
+        for (const cm of conversation_members || []) {
             // Calculate unread count for this specific user
             // Group by batch_id to avoid counting same message multiple times due to encryption per public key
             const unreadBatches = await prisma.msgs.groupBy({
@@ -110,27 +110,49 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             const remoteId = cm.user_id;
             console.log("Trigger 'conversation updated' to", `user.${remoteId}.conversations`);
             
-            // Use the first entity for the conversation update (they all have same metadata)
-            const firstEntity = entities[0];
-            const updatePayload = {
-                ...firstEntity,
-                id: firstEntity.id.toString(),
-                conversation_id: firstEntity.conversation_id.toString(),
-                sender_id: firstEntity.sender_id.toString(),
-                public_key_id: firstEntity.public_key_id?.toString(),
-                batch_id: firstEntity.batch_id,
-                latestMessage: latestMessage ? {
-                    id: latestMessage.id.toString(),
-                    content: latestMessage.content,
-                    created_at: latestMessage.created_at,
-                    sender_id: latestMessage.sender_id.toString(),
-                    public_key_id: latestMessage.public_key_id?.toString(),
-                    batch_id: latestMessage.batch_id
-                } : null,
-                unread_count: unreadCount
-            };
+            // For e2e encryption: get all public keys for this remote user
+            const remoteUserPublicKeys = await prisma.public_keys.findMany({
+                where: {
+                    user_id: remoteId
+                },
+                select: {
+                    id: true
+                }
+            });
 
-            await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', updatePayload);
+            // Get all messages from the latest batch that are encrypted for this remote user
+            const latestBatchMessagesForUser = await prisma.msgs.findMany({
+                where: {
+                    conversation_id: conversation_id,
+                    batch_id: latestBatchMessage?.batch_id,
+                    public_key_id: {
+                        in: remoteUserPublicKeys.map(pk => pk.id)
+                    }
+                }
+            });
+
+            // Send notification for each message from the latest batch encrypted for this remote user
+            for (const messageForUser of latestBatchMessagesForUser) {
+                const updatePayload = {
+                    ...messageForUser,
+                    id: messageForUser.id.toString(),
+                    conversation_id: messageForUser.conversation_id.toString(),
+                    sender_id: messageForUser.sender_id.toString(),
+                    public_key_id: messageForUser.public_key_id?.toString(),
+                    batch_id: messageForUser.batch_id,
+                    latestMessage: { // If send via pusher, it should have a value
+                        id: messageForUser.id.toString(),
+                        content: messageForUser.content,
+                        created_at: messageForUser.created_at,
+                        sender_id: messageForUser.sender_id.toString(),
+                        public_key_id: messageForUser.public_key_id?.toString(),
+                        batch_id: messageForUser.batch_id
+                    },
+                    unread_count: unreadCount
+                };
+
+                await pusher.trigger(`user.${remoteId}.conversations`, 'conversation-updated', updatePayload);
+            }
         }
         
         return NextResponse.json({

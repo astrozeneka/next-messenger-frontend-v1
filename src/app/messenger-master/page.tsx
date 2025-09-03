@@ -51,7 +51,12 @@ function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessa
     return <span className="text-sm text-gray-400 italic">Decrypting...</span>;
   }
 
-  return <span className="text-sm text-gray-500">{decryptedContent}</span>;
+  return (
+    <>
+      <span className="text-sm text-gray-500">{decryptedContent}</span>
+      f<span>{JSON.stringify(message as any)}</span>
+    </>
+  );
 }
 
 function ConversationPlaceholder() {
@@ -206,7 +211,7 @@ export default function MessengerMaster() {
                   <div className="mt-1">
                     <DecryptedLatestMessage 
                       message={conversation.latest_message} 
-                      encryptionKey={encryptionKey} 
+                      encryptionKey={user.private_key} 
                     />
                   </div>
                 </div>

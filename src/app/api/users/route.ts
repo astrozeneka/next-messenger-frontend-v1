@@ -4,6 +4,8 @@ import { withAuth, AuthenticatedRequest } from "@/lib/authMiddleware";
 
 export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
+    const url = new URL(request.url);
+    const public_key_id = url.searchParams.get('public_key_id');
     const currentUser = request.user;
 
     // 1. Get the list of users from table
@@ -69,12 +71,26 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         }
 
         // 3.A For each conversation, find the latest message
+        const whereClause: any = {
+          conversation_id: conversationId
+        };
+        
+        if (public_key_id) {
+          whereClause.public_key_id = parseInt(public_key_id);
+        }
+        
         const latestMessage = await prisma.msgs.findFirst({
-          where: {
-            conversation_id: conversationId
-          },
+          where: whereClause,
           orderBy: {
             created_at: 'desc'
+          },
+          select: {
+            id: true,
+            content: true,
+            created_at: true,
+            sender_id: true,
+            public_key_id: true,
+            batch_id: true
           }
         });
 
@@ -105,7 +121,9 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             id: latestMessage.id.toString(),
             content: latestMessage.content,
             created_at: latestMessage.created_at,
-            sender_id: latestMessage.sender_id.toString()
+            sender_id: latestMessage.sender_id.toString(),
+            public_key_id: latestMessage.public_key_id?.toString(),
+            batch_id: latestMessage.batch_id
           } : null,
           unread_count: unreadCount
         };
