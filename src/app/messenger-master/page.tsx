@@ -238,7 +238,7 @@ export default function MessengerMaster() {
       {/* Conversation Detail - Right Column */}
       {!isMobile && (
         selectedConversationId ? (
-          <div className="flex flex-1">
+          <div className="flex flex-1 h-screen">
             <ConversationDetail conversationId={selectedConversationId} />
           </div>
         ) : (

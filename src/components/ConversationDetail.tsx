@@ -399,7 +399,10 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         </div>
       </div>
 
-      <div className="flex-1 bg-gray-100 p-4 overflow-y-auto">
+      <div className="flex-1 bg-gray-100 p-4 overflow-y-auto min-h-0">
+
+        <div className="bg-red-400">Hello world</div>
+        
         {messages.map((msg) => (
           <div key={msg.id}>
             <DecryptedMessage
@@ -410,6 +413,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
             />
           </div>
         ))}
+        
         
         {messages.length === 0 && (
           <p className="text-gray-500 text-center">No messages yet...</p>
