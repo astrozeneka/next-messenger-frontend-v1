@@ -182,6 +182,8 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         const url = new URL(request.url);
         const conversation_id = url.searchParams.get('conversation_id');
         const public_key_id = url.searchParams.get('public_key_id');
+        const before_id = url.searchParams.get('before_id');
+        const limit = url.searchParams.get('limit'); // Optional limit, defaults to 20
         const currentUser = request.user;
 
         // Validate input
@@ -201,6 +203,10 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
             );
         }
 
+        // Parse pagination parameters
+        const pageLimit = limit ? Math.min(parseInt(limit), 100) : 20; // Max 100, default 20
+        const beforeMessageId = before_id ? parseInt(before_id) : null;
+
         // Fetch messages for the conversation
         const whereClause: any = {
             conversation_id: conversationIdNum
@@ -209,26 +215,45 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         if (public_key_id) {
             whereClause.public_key_id = parseInt(public_key_id);
         }
+
+        // Add pagination condition - get messages before the specified ID
+        if (beforeMessageId) {
+            whereClause.id = {
+                lt: beforeMessageId // Less than (before) the specified message ID
+            };
+        }
         
         const messages = await prisma.msgs.findMany({
             where: whereClause,
             orderBy: {
-                created_at: 'asc'
-            }
+                created_at: 'desc'
+            },
+            take: pageLimit
         });
+
+        // Reverse the array to get chronological order (oldest to newest)
+        const orderedMessages = messages.reverse();
 
         // Note: Messages are no longer automatically marked as delivered when fetched
         // They will be marked as read when actually viewed in the detail view
-
-        return NextResponse.json(messages.map((msg: any) => ({
-            ...msg,
-            id: msg.id.toString(),
-            conversation_id: msg.conversation_id.toString(),
-            sender_id: msg.sender_id.toString(),
-            public_key_id: msg.public_key_id?.toString(),
-            batch_id: msg.batch_id,
-            status: msg.status
-        })));
+        return NextResponse.json({
+            messages: orderedMessages.map((msg: any) => ({
+                ...msg,
+                id: msg.id.toString(),
+                conversation_id: msg.conversation_id.toString(),
+                sender_id: msg.sender_id.toString(),
+                public_key_id: msg.public_key_id?.toString(),
+                batch_id: msg.batch_id,
+                status: msg.status
+            })),
+            pagination: {
+                has_more: messages.length === pageLimit,
+                oldest_id: orderedMessages.length > 0 ? orderedMessages[0].id.toString() : null,
+                newest_id: orderedMessages.length > 0 ? orderedMessages[orderedMessages.length - 1].id.toString() : null,
+                count: orderedMessages.length,
+                limit: pageLimit
+            }
+        });
     } catch (error) {
         console.error('Error fetching messages:', error);
         return NextResponse.json(

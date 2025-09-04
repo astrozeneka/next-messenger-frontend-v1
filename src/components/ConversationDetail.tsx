@@ -4,7 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 // import { useConversations } from "@/hooks/useConversations";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 export interface Msg {
   id: string
@@ -85,7 +85,7 @@ interface ConversationDetailProps {
 
 export default function ConversationDetail({ conversationId }: ConversationDetailProps) {
   const { token, user } = useAuth();
-  const { messages, isConnected, initializeMessages } = useMessages(
+  const { messages, isConnected, initializeMessages, prependMessages } = useMessages(
     `conversation.${conversationId}`,
     user?.id,
     token || undefined,
@@ -109,6 +109,59 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
   } | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
+
+  // Used for managing pagination
+  let [furthestId, setFurthestId] = useState<number | null>(null);
+  let [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+  let [hasMoreMessages, setHasMoreMessages] = useState<boolean>(true); // Assume more messages initially
+
+  // Load more function
+  const loadMore = useCallback(async () => {
+    if (isLoadingMore) return; // Prevent multiple loads
+    if (!token || !conversationId || !user?.id) return;
+    
+    setIsLoadingMore(true);
+    const response = await fetch(`/api/msgs?conversation_id=${conversationId}&before_id=${furthestId}&limit=20&public_key_id=${(user?.public_key as any).id}`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+        Accept: 'application/json'
+      }
+    });
+
+    if (response.ok) {
+      const responseData = await response.json();
+      const olderMessages = responseData.messages || [];
+      const paginationInfo = responseData.pagination || {};
+
+
+      if (olderMessages.length == 0 || !paginationInfo.has_more) {
+        setHasMoreMessages(false);
+      } else {
+        // Format messages
+        const formattedMessages = olderMessages.map((msg: Msg) => ({
+          ...msg,
+          id: msg.id.toString(),
+          conversation_id: msg.conversation_id.toString(),
+          sender_id: msg.sender_id.toString()
+        }));
+        // Set the furtest Id
+        setFurthestId(formattedMessages[0].id)
+        // Update the message content
+        prependMessages(formattedMessages);
+        // Set has more messages
+        setHasMoreMessages(paginationInfo.has_more || false)
+      }
+    }
+    setIsLoadingMore(false);
+  }, [token, conversationId, user?.id, isLoadingMore, hasMoreMessages, prependMessages])
+
+  // Handle scrolling for seamless pagination
+  const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
+    const remainingPixels = e.currentTarget.scrollHeight - e.currentTarget.clientHeight + e.currentTarget.scrollTop;
+    if (remainingPixels < 100){
+      loadMore()
+    }
+  }
 
   useEffect(() => {
     if (!token) return;
@@ -162,7 +215,10 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         });
 
         if (response.ok) {
-          const fetchedMessages = await response.json();
+          const responseData = await response.json();
+          const fetchedMessages = responseData.messages || [];
+          const paginationInfo = responseData.pagination || {};
+
           const formattedMessages = fetchedMessages.map((msg: Msg) => ({
             ...msg,
             id: msg.id.toString(),
@@ -171,6 +227,10 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
           }));
           
           initializeMessages(formattedMessages);
+          setFurthestId(formattedMessages[0].id)
+          
+          // Update pagination state based on API response
+          setHasMoreMessages(paginationInfo.has_more || false);
 
           const messagesToMarkAsRead = formattedMessages
             .filter((msg: Msg) => msg.sender_id !== user.id && (msg.status === 'sent' || msg.status === 'delivered'))
@@ -392,18 +452,16 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
   return (
     <div className="flex flex-col h-full flex-1">
       <div className="border-b p-4">
-        <h2 className="text-xl font-bold">Chat with {remoteUser.name}</h2>
+        <h2 className="text-xl font-bold">Chat with {remoteUser.name} - hmm { hasMoreMessages }</h2>
         <div className="text-sm text-gray-500 flex gap-4">
           <span>{isConnected ? '🟢 Connected' : '🔴 Disconnected'}</span>
           <span>Conversation ID: {conversationId}</span>
         </div>
       </div>
 
-      <div className="flex-1 bg-gray-100 p-4 overflow-y-auto min-h-0">
-
-        <div className="bg-red-400">Hello world</div>
+      <div className="flex-1 bg-gray-100 p-4 overflow-y-auto min-h-0" style={{ display: 'flex', flexDirection: 'column-reverse' }} onScroll={handleScroll}>
         
-        {messages.map((msg) => (
+        {messages.slice().reverse().map((msg) => (
           <div key={msg.id}>
             <DecryptedMessage
               message={msg}

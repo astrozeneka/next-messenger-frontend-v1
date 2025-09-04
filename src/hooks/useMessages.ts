@@ -153,5 +153,24 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
     }
   }, [currentUserId, markMessagesAsRead]);
 
-  return { messages, isConnected, addOrUpdateMessage, initializeMessages };
+  const prependMessages = useCallback((olderMessages: Msg[]) => {
+    setMessages((prevMessages) => {
+      // Combine older messages with existing messages
+      const combinedMessages = [...olderMessages, ...prevMessages];
+      
+      // Remove duplicates based on message ID
+      const uniqueMessages = combinedMessages.filter((msg, index, self) => 
+        index === self.findIndex(m => m.id === msg.id)
+      );
+      
+      // Sort messages by creation time
+      const sortedMessages = uniqueMessages.sort((a, b) => 
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+      );
+
+      return sortedMessages;
+    });
+  }, []);
+
+  return { messages, isConnected, addOrUpdateMessage, initializeMessages, prependMessages };
 };
