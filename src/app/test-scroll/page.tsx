@@ -5,6 +5,24 @@ import { useEffect, useState } from "react";
 export default function TestScroll() {
     let [items, setItems] = useState<string[]>([]);
     let [furthestId, setFurthestId] = useState<number | null>(null);
+    // This is used to avoid multiple loads at the same time
+    let [isLoadingMore, setIsLoadingMore] = useState<boolean>(false);
+
+    // Load more function
+    const loadMore = async () => {
+        if (isLoadingMore) return; // Prevent multiple loads
+        setIsLoadingMore(true);
+        console.log("load more");
+        setTimeout(() => {
+            for (let i = 1; i <= 20; i++) {
+                const newId = (furthestId || 0) + i;
+                setItems((items) => [...items, `Hello world ${newId}`]);
+            }
+            setFurthestId((furthestId || 0) + 20);
+            console.log("loaded more");
+            setIsLoadingMore(false);
+        }, 400);
+    }
 
     // On initialization
     useEffect(() => {
@@ -16,7 +34,11 @@ export default function TestScroll() {
     }, []);
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
-        console.log("scroll", e.currentTarget.scrollTop);
+        const remainingPixels = e.currentTarget.scrollHeight - e.currentTarget.clientHeight + e.currentTarget.scrollTop;
+        console.log("rem", remainingPixels);
+        if (remainingPixels < 100) {
+            loadMore();
+        }
     }
 
     return (
