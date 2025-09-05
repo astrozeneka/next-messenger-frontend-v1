@@ -144,6 +144,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         if (!hasMatchingKey) {
           console.log('No existing keys found, generating new key pair');
           
+          // 🔑 NEW KEYPAIR GENERATION AFTER LOGIN - When user has no matching private key locally
           const keyPair = await generateKeyPair();
           currentPrivateKey = keyPair.privateKey;
           storePrivateKey(keyPair.publicKey, keyPair.privateKey);
@@ -209,6 +210,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
         localStorage.setItem('refreshToken', data.refreshToken);
 
         // Step 3: Generate key pair and store locally
+        // 🔑 NEW KEYPAIR GENERATION AFTER REGISTRATION - Always generates new keypair for new users
         const keyPair = await generateKeyPair();
         storePrivateKey(keyPair.publicKey, keyPair.privateKey);
 

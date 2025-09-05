@@ -13,6 +13,10 @@ interface Msg {
   public_key_id?: string;
 }
 
+interface Notice extends Msg {
+  notice_type: 'e2e-key-init';
+}
+
 /**
  * The channel-id should be the user-id
  */

@@ -79,6 +79,17 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
   );
 }
 
+function EncryptionNotice() {
+  return (
+    <div className="text-center mb-3">
+      <p className="text-sm">
+        This conversation is end-to-end encrypted. Messages are encrypted on your device before being sent and can only be decrypted by the intended recipient.
+        Thus, it is impossible to recover previous messages.
+      </p>
+    </div>
+  );
+}
+
 interface ConversationDetailProps {
   conversationId: string;
 }
@@ -460,6 +471,8 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
       </div>
 
       <div className="flex-1 bg-gray-100 p-4 overflow-y-auto min-h-0" style={{ display: 'flex', flexDirection: 'column-reverse' }} onScroll={handleScroll}>
+
+
         
         {messages.slice().reverse().map((msg) => (
           <div key={msg.id}>
@@ -476,6 +489,11 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         {messages.length === 0 && (
           <p className="text-gray-500 text-center">No messages yet...</p>
         )}
+
+        { isLoadingMore && (<span>Loading ...</span>)}
+
+
+        {!hasMoreMessages && (<EncryptionNotice />)}
       </div>
 
       <div className="border-t p-4">
