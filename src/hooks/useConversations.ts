@@ -12,6 +12,7 @@ interface Msg {
   type: string;
   status: string;
   public_key_id?: string;
+  batch_id?: number;
 }
 
 interface Conversation {
@@ -53,11 +54,17 @@ export const useConversations = (userId?: string, token?: string) => {
       
       const data = await response.json();
       const sortedConversations = data.sort((a: Conversation, b: Conversation) => {
-        const aTime = a.latest_message ? new Date(a.latest_message.created_at).getTime() : 0;
-        const bTime = b.latest_message ? new Date(b.latest_message.created_at).getTime() : 0;
-        return bTime - aTime;
+        // Handle null latest_message - put conversations without messages at the bottom
+        if (!a.latest_message && !b.latest_message) return 0;
+        if (!a.latest_message) return 1; // a goes to bottom
+        if (!b.latest_message) return -1; // b goes to bottom
+        
+        const aBatchId = a.latest_message.batch_id || 0;
+        const bBatchId = b.latest_message.batch_id || 0;
+        return bBatchId - aBatchId; // Higher batch_id first
       });
       
+      console.log("Sorted conversations:", sortedConversations);
       setConversations(sortedConversations);
     } catch (error) {
       console.error('Error fetching conversations:', error);
@@ -83,12 +90,11 @@ export const useConversations = (userId?: string, token?: string) => {
 
       const updated = prev.map(conv => {
         if (conv.conversation_id === conversationId) {
-          // Handle cases where created_at might be null/undefined
-          const messageTime = message.created_at ? new Date(message.created_at).getTime() : Date.now();
-          const currentTime = conv.latest_message?.created_at ? 
-            new Date(conv.latest_message.created_at).getTime() : 0;
+          // Use batch_id for comparison since created_at can be null
+          const messageBatchId = message.batch_id || 0;
+          const currentBatchId = conv.latest_message?.batch_id || 0;
           
-          const shouldUpdate = !conv.latest_message || messageTime > currentTime;
+          const shouldUpdate = !conv.latest_message || messageBatchId > currentBatchId;
           
           if (shouldUpdate) {
             console.log('Updating conversation', conversationId, 'from:', conv.latest_message, 'to:', message);
@@ -103,14 +109,20 @@ export const useConversations = (userId?: string, token?: string) => {
       });
 
       // Sort by latest message timestamp, handling null values
-      return updated.sort((a, b) => {
-        const aTime = a.latest_message?.created_at ? 
-          new Date(a.latest_message.created_at).getTime() : 0;
-        const bTime = b.latest_message?.created_at ? 
-          new Date(b.latest_message.created_at).getTime() : 0;
-        return bTime - aTime;
+      const output = updated.sort((a, b) => {
+        // Handle null latest_message - put conversations without messages at the bottom
+        if (!a.latest_message && !b.latest_message) return 0;
+        if (!a.latest_message) return 1; // a goes to bottom
+        if (!b.latest_message) return -1; // b goes to bottom
+        
+        const aBatchId = a.latest_message.batch_id || 0;
+        const bBatchId = b.latest_message.batch_id || 0;
+        return bBatchId - aBatchId; // Higher batch_id first
       });
+      console.log("UUU", output);
+      return output;
     });
+    console.log('Conversations after update:', conversations);
   }, [fetchConversations]);
 
   useEffect(() => {
