@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import pusher from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const body = await request.json();
@@ -44,7 +46,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 },
                 conversation_id: conversationIdNum,
                 sender_id: {
-                    not: currentUser!.id
+                    not: parseInt(currentUser!.id)
                 },
                 status: {
                     in: ['sent', 'delivered']
@@ -56,7 +58,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         });
 
         // Get unique batch_ids
-        const batchIds = [...new Set(messagesToRead.map(msg => msg.batch_id).filter(id => id !== null))];
+        const batchIds = Array.from(new Set(messagesToRead.map(msg => msg.batch_id).filter(id => id !== null)));
         
         // Update all messages in these batches to 'read' status
         const updateResult = await prisma.msgs.updateMany({
@@ -66,7 +68,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 },
                 conversation_id: conversationIdNum,
                 sender_id: {
-                    not: currentUser!.id
+                    not: parseInt(currentUser!.id)
                 },
                 status: {
                     in: ['sent', 'delivered']  // Can mark messages as read from either sent or delivered status

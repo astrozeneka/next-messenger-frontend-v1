@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthenticatedRequest } from "@/lib/authMiddleware";
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const { searchParams } = new URL(request.url);
@@ -30,7 +32,7 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
         id: true,
         name: true,
         email: true,
-        public_key: true,
+        // public_key: true, // public_key is now a one-to-many relation
         created_at: true,
         updated_at: true
       }

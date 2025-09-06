@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { withAuth, AuthenticatedRequest } from "@/lib/authMiddleware";
 
+export const dynamic = 'force-dynamic';
+
 export const GET = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const url = new URL(request.url);

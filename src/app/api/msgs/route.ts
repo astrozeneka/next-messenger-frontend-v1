@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import pusher from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const body = await request.json();
@@ -46,7 +48,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 const entity = await tx.msgs.create({
                     data: {
                         conversation_id,
-                        sender_id: currentUser!.id,
+                        sender_id: parseInt(currentUser!.id),
                         content: msg.content,
                         public_key_id: parseInt(msg.public_key_id),
                         batch_id: batchId,

@@ -58,7 +58,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
   const fetchUser = async (authToken: string) => {
     try {
-      let locallySavedUser = await localStorage.getItem('userData');
+      let locallySavedUser = localStorage.getItem('userData');
       if (!locallySavedUser) throw new Error("No user data in localStorage");
       const response = await fetch('/api/auth/user', {
         headers: {
@@ -161,7 +161,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
           if (!publicKeyResponse.ok) {
             console.error('Failed to store new public key on server');
-            return;
+            return { success: false, error: 'Failed to store public key' };
           } else {
             const responseData = await publicKeyResponse.json();
             currentPublicKey = responseData.public_key as { id: string; public_key_value: string };
@@ -177,14 +177,14 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           private_key: currentPrivateKey!,
           public_key: currentPublicKey!
         };
-        await localStorage.setItem('userData', JSON.stringify(completeUser));
+        localStorage.setItem('userData', JSON.stringify(completeUser));
         setUser(completeUser);
 
         return { success: true };
       } else {
         return { success: false, error: data.error };
       }
-    } catch {
+    } catch (error) {
       return { success: false, error: 'Network error' };
     }
   };
@@ -227,7 +227,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
 
         if (!publicKeyResponse.ok) {
           console.error('Failed to store public key on server');
-          return;
+          return { success: false, error: 'Failed to store public key' };
           // Don't fail registration - user already has working session
         } else {
           console.log('Public key stored on server successfully');
@@ -251,7 +251,7 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
       } else {
         return { success: false, error: data.error };
       }
-    } catch {
+    } catch (error) {
       return { success: false, error: 'Network error' };
     }
   };

@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import pusher from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export const PUT = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const body = await request.json();
@@ -31,7 +33,7 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             );
         }
 
-        if (existingMessage.sender_id != currentUser!.id) { // Type error: This comparison appears to be unintentional because the types 'bigint' and 'string' have no overlap.
+        if (existingMessage.sender_id.toString() != currentUser!.id) { // Type error: This comparison appears to be unintentional because the types 'bigint' and 'string' have no overlap.
             return NextResponse.json(
                 { error: 'Unauthorized to edit this message' },
                 { status: 403 }
@@ -53,7 +55,7 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             id: updatedMessage.id.toString(),
             conversation_id: updatedMessage.conversation_id.toString(),
             sender_id: updatedMessage.sender_id.toString(),
-            public_key_id: updatedMessage.public_key_id.toString()
+            public_key_id: updatedMessage.public_key_id?.toString()
         });
 
         // Check if message is the last of the conversation
@@ -73,7 +75,7 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
                 where: { 
                     conversation_id: updatedMessage.conversation_id,
                     user_id: {
-                        not: currentUser!.id
+                        not: currentUser!.id as any
                     }
                 }
             }); // Expected to fetch only one message since this a private messaging
@@ -84,7 +86,7 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             const updatePayload = {
                 ...conversation,
                 id: updatedMessage.id.toString(),
-                conversation_id: conversation.id.toString(),
+                conversation_id: conversation?.id.toString(),
                 sender_id: updatedMessage.sender_id.toString(),
                 latestMessage: {
                     id: updatedMessage.id.toString(),
@@ -102,7 +104,7 @@ export const PUT = withAuth(async (request: AuthenticatedRequest) => {
             id: updatedMessage.id.toString(),
             conversation_id: updatedMessage.conversation_id.toString(),
             sender_id: updatedMessage.sender_id.toString(),
-            public_key_id: updatedMessage.public_key_id.toString()
+            public_key_id: updatedMessage.public_key_id?.toString()
         });
     } catch (error) {
         console.error('Error updating message:', error);

@@ -12,7 +12,7 @@ import ConversationDetail from '../../components/ConversationDetail';
 
 interface DecryptedLatestMessageProps {
   message: Msg | null;
-  encryptionKey: string | null;
+  encryptionKey: string | null | undefined;
 }
 
 function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessageProps) {

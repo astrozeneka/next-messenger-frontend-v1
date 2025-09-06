@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { AuthenticatedRequest, withAuth } from "@/lib/authMiddleware";
 
+export const dynamic = 'force-dynamic';
+
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
   try {
     const { publicKey } = await request.json();

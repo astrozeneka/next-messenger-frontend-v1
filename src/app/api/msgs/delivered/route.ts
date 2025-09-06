@@ -3,6 +3,8 @@ import { prisma } from "@/lib/prisma";
 import pusher from "@/lib/pusher-server";
 import { NextResponse } from "next/server";
 
+export const dynamic = 'force-dynamic';
+
 export const POST = withAuth(async (request: AuthenticatedRequest) => {
     try {
         const body = await request.json();
@@ -50,7 +52,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     },
                     conversation_id: conversationIdNum,
                     sender_id: {
-                        not: currentUser!.id
+                        not: parseInt(currentUser!.id)
                     },
                     status: 'sent'
                 },
@@ -60,7 +62,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             });
 
             // Get unique batch_ids
-            const batchIds = [...new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null))];
+            const batchIds = Array.from(new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null)));
             
             // Update all messages in these batches to 'delivered' status
             updateResult = await prisma.msgs.updateMany({
@@ -70,7 +72,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     },
                     conversation_id: conversationIdNum,
                     sender_id: {
-                        not: currentUser!.id
+                        not: parseInt(currentUser!.id)
                     },
                     status: 'sent'  // Only update messages that are currently 'sent'
                 },
@@ -84,7 +86,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 where: {
                     conversation_id: conversationIdNum,
                     sender_id: {
-                        not: currentUser!.id
+                        not: parseInt(currentUser!.id)
                     },
                     status: 'sent'  // Only update messages that are currently 'sent'
                 },
@@ -111,7 +113,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                         },
                         conversation_id: conversationIdNum,
                         sender_id: {
-                            not: currentUser!.id
+                            not: parseInt(currentUser!.id)
                         },
                         status: 'delivered'
                     },
@@ -120,7 +122,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     }
                 });
 
-                const batchIds = [...new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null))];
+                const batchIds = Array.from(new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null)));
                 
                 whereClause = {
                     batch_id: {
@@ -141,7 +143,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
             }
 
             const updatedMessages = await prisma.msgs.findMany({
-                where: whereClause,
+                where: whereClause as any,
                 orderBy: {
                     created_at: 'asc'
                 }
@@ -178,7 +180,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                     },
                     conversation_id: conversationIdNum,
                     sender_id: {
-                        not: currentUser!.id
+                        not: parseInt(currentUser!.id)
                     },
                     status: 'delivered'
                 },
@@ -187,7 +189,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                 }
             });
 
-            const batchIds = [...new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null))];
+            const batchIds = Array.from(new Set(messagesToDeliver.map(msg => msg.batch_id).filter(id => id !== null)));
             
             responseData = {
                 ...responseData,
