@@ -187,7 +187,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
 
 function EncryptionNotice() {
   return (
-    <div className="text-center mb-3">
+    <div className="text-center p-7">
       <p className="text-sm text-gray-500 dark:text-gray-400">
         End-to-end encryption is enabled for this conversation. It is impossible to fetch previous messages.
       </p>
@@ -236,6 +236,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const loadMore = useCallback(async () => {
     if (isLoadingMore) return; // Prevent multiple loads
     if (!token || !conversationId || !user?.id) return;
+    if (!hasMoreMessages) return; // No more messages to load
     
     setIsLoadingMore(true);
     const response = await fetch(`/api/msgs?conversation_id=${conversationId}&before_id=${furthestId}&limit=20&public_key_id=${(user?.public_key as any).id}`, {
@@ -249,6 +250,8 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
       const responseData = await response.json();
       const olderMessages = responseData.messages || [];
       const paginationInfo = responseData.pagination || {};
+
+      console.log("=====>", paginationInfo)
 
 
       if (olderMessages.length == 0 || !paginationInfo.has_more) {
@@ -648,6 +651,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             <h2 className="font-semibold text-gray-800 dark:text-white">{remoteUser.name}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {isConnected ? 'Online' : 'Last seen recently'}
+              <span> { hasMoreMessages ? '• Has more messages' : '• No more messages' }</span>
             </p>
           </div>
         </div>
