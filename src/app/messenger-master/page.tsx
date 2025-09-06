@@ -10,6 +10,24 @@ import { formatMessageTime } from '../../lib/dateUtils';
 import { Msg } from '../messenger-detail/[id]/page';
 import ConversationDetail from '../../components/ConversationDetail';
 
+function parseMessageWithAttachment(content: string): { text: string; hasAttachment: boolean } {
+  const attachmentRegex = /\(([^)]+)\)\[([^\]]+)\]/;
+  const match = content.match(attachmentRegex);
+  
+  if (match) {
+    const text = content.replace(attachmentRegex, '').trim();
+    return {
+      text,
+      hasAttachment: true
+    };
+  }
+  
+  return {
+    text: content,
+    hasAttachment: false
+  };
+}
+
 
 interface DecryptedLatestMessageProps {
   message: Msg | null;
@@ -36,7 +54,30 @@ function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessa
 
       try {
         const decrypted = await decryptMessage(message.content, encryptionKey);
-        setDecryptedContent(decrypted.length > 30 ? decrypted.substring(0, 30) + '...' : decrypted);
+        
+        // Handle deleted messages
+        if (decrypted === '[deleted]') {
+          setDecryptedContent('This message has been deleted');
+          setIsDecrypting(false);
+          return;
+        }
+        
+        // Parse for attachments
+        const { text, hasAttachment } = parseMessageWithAttachment(decrypted);
+        
+        if (hasAttachment) {
+          // If there's text with the attachment, show the text
+          if (text.trim()) {
+            const displayText = text.length > 30 ? text.substring(0, 30) + '...' : text;
+            setDecryptedContent(`📎 ${displayText}`);
+          } else {
+            // If it's only an attachment without text
+            setDecryptedContent('An attachment file has been sent');
+          }
+        } else {
+          // Regular text message
+          setDecryptedContent(decrypted.length > 30 ? decrypted.substring(0, 30) + '...' : decrypted);
+        }
       } catch (error) {
         console.error('Decryption failed:', error);
         setDecryptedContent('[Decryption failed]');
@@ -55,7 +96,6 @@ function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessa
   return (
     <>
       <span className="text-sm text-gray-500">{decryptedContent}</span>
-      f<span>{JSON.stringify(message as any)}</span>
     </>
   );
 }
