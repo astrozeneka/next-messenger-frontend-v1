@@ -104,7 +104,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   return (
     <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages */}
-      {!isReceived && (
+      {!isReceived && decryptedContent !== '[deleted]' && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
           <button
             onClick={toggleMenu}
@@ -143,43 +143,55 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
       <div className={`max-w-xs lg:max-w-md ${
         isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
       } rounded-2xl px-4 py-2 shadow-sm`}>
-        <p className="text-sm">{decryptedContent}</p>
-        <div className="flex items-center justify-between mt-1">
-          <div className="flex items-center space-x-1">
-            <p className={`text-xs ${isReceived ? 'text-gray-500 dark:text-gray-400' : 'text-blue-100'}`}>
-              {formatMessageTime(message.created_at)}
-            </p>
-            {!isReceived && (
-              <div className="flex items-center ml-1">
-                {message.status === 'sent' && (
-                  <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
-                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                  </svg>
-                )}
-                {message.status === 'delivered' && (
-                  <div className="flex">
+        {decryptedContent === '[deleted]' ? (
+          <p className={`text-sm italic ${
+            isReceived 
+              ? 'text-gray-500 dark:text-gray-400' 
+              : 'text-blue-200'
+          }`}>
+            This message has been deleted
+          </p>
+        ) : (
+          <p className="text-sm">{decryptedContent}</p>
+        )}
+        {decryptedContent !== '[deleted]' && (
+          <div className="flex items-center justify-between mt-1">
+            <div className="flex items-center space-x-1">
+              <p className={`text-xs ${isReceived ? 'text-gray-500 dark:text-gray-400' : 'text-blue-100'}`}>
+                {formatMessageTime(message.created_at)}
+              </p>
+              {!isReceived && (
+                <div className="flex items-center ml-1">
+                  {message.status === 'sent' && (
                     <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
                       <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                     </svg>
-                    <svg className="w-3 h-3 text-blue-100 -ml-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-                {message.status === 'read' && (
-                  <div className="flex">
-                    <svg className="w-3 h-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                    <svg className="w-3 h-3 text-green-300 -ml-1" fill="currentColor" viewBox="0 0 20 20">
-                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                    </svg>
-                  </div>
-                )}
-              </div>
-            )}
+                  )}
+                  {message.status === 'delivered' && (
+                    <div className="flex">
+                      <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <svg className="w-3 h-3 text-blue-100 -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                  {message.status === 'read' && (
+                    <div className="flex">
+                      <svg className="w-3 h-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                      <svg className="w-3 h-3 text-green-300 -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );
