@@ -35,7 +35,6 @@ export default function TestScroll() {
 
     const handleScroll = (e: React.UIEvent<HTMLDivElement>) => {
         const remainingPixels = e.currentTarget.scrollHeight - e.currentTarget.clientHeight + e.currentTarget.scrollTop;
-        console.log("rem", remainingPixels);
         if (remainingPixels < 100) {
             loadMore();
         }

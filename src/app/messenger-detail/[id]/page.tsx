@@ -134,7 +134,6 @@ export default function MessengerDetail({ params }: { params: { id: string } }) 
 
     const loadMessages = async () => {
       try {
-        console.log("*****")
         const response = await fetch(`/api/msgs?conversation_id=${conversation_id}`, {
           headers: {
             Authorization: `Bearer ${token}`,

@@ -239,7 +239,6 @@ export const AuthProvider = ({ children }: AuthProviderProps) => {
           private_key: keyPair.privateKey,
           public_key: publicKeyResponseData.public_key
         };
-        console.log(completeUser)
 
         // Step 5: Set user session with private key
         setUser(completeUser);

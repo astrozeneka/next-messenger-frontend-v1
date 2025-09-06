@@ -169,7 +169,6 @@ export const useConversations = (userId?: string, token?: string) => {
             },
             "unread_count": 1
         } */
-      console.log('self is ', (user?.public_key as any).id)
       // Only process messages that match the user's public_key_id
       if (!(user?.public_key as any) || data.latestMessage.public_key_id === (user?.public_key as any).id) {
         updateConversationWithMessage(data.conversation_id, data.latestMessage, data.unread_count);

@@ -146,7 +146,6 @@ export default function MessengerMaster() {
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
 
   useEffect(() => {
-    console.log(user); // no public_key provided
     if (!user?.public_key) return;
 
     const userPrivateKey = getPrivateKey(user.public_key);

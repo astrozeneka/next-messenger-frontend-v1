@@ -317,7 +317,6 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
 
   // Initialize content related state
   useEffect(() => {
-    console.log("=======> Decrypted content changed:", decryptedContent);
     
     // Use reliable regex to detect attachment pattern: (filename)[url]
     const attachmentRegex = /\(([^)]+)\)\[([^\]]+)\]/;
