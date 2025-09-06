@@ -74,7 +74,7 @@ function FileAttachmentComponent({
     };
   }, [showMenu]);
 
-  const toggleMenu = () => {
+  /*const toggleMenu = () => {
     if (!showMenu && menuRef.current && attachmentRef.current) {
       const messageContainer = attachmentRef.current.closest('[style*="flex-direction: column-reverse"]') as HTMLElement;
       
@@ -113,13 +113,13 @@ function FileAttachmentComponent({
       setMenuPosition({ horizontal, vertical });
     }
     setShowMenu(!showMenu);
-  };
+  };*/
 
   if (isImage) {
     return (
       <div ref={attachmentRef} className={`mt-1 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
         {/* Three-dot menu for sent messages with attachments */}
-        {!isReceived && (onEditClick || onDeleteClick) && (
+        {/*{!isReceived && (onEditClick || onDeleteClick) && (
           <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
             <button
               onClick={toggleMenu}
@@ -163,7 +163,7 @@ function FileAttachmentComponent({
               </div>
             )}
           </div>
-        )}
+        )}*/}
 
         <div className="max-w-xs lg:max-w-md rounded-lg overflow-hidden">
           <img 
@@ -206,6 +206,7 @@ function FileAttachmentComponent({
   return (
     <div ref={attachmentRef} className={`mt-1 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages with attachments */}
+      {/*
       {!isReceived && (onEditClick || onDeleteClick) && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
           <button
@@ -250,7 +251,7 @@ function FileAttachmentComponent({
             </div>
           )}
         </div>
-      )}
+      )}*/}
 
       <div className="bg-gray-100 dark:bg-gray-600 p-3 rounded-2xl max-w-xs lg:max-w-md">
         <div className="flex items-center space-x-3">
@@ -305,10 +306,30 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
   const [menuPosition, setMenuPosition] = useState<{ horizontal: 'right' | 'left', vertical: 'top' | 'bottom' }>({ horizontal: 'right', vertical: 'bottom' });
   const menuRef = useRef<HTMLDivElement>(null);
   const messageRef = useRef<HTMLDivElement>(null);
+
+  // Content related state
+  const [haveAttachment, setHaveAttachment] = useState<boolean>(false);
+  const [haveText, setHaveText] = useState<boolean>(false);
   
   const { text, attachment } = parseMessageWithAttachment(decryptedContent);
   const isImage = attachment && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(attachment.fileName);
   const isImageOnly = isImage && !text.trim();
+
+  // Initialize content related state
+  useEffect(() => {
+    console.log("=======> Decrypted content changed:", decryptedContent);
+    
+    // Use reliable regex to detect attachment pattern: (filename)[url]
+    const attachmentRegex = /\(([^)]+)\)\[([^\]]+)\]/;
+    const hasAttachment = attachmentRegex.test(decryptedContent);
+    
+    // Extract text content by removing attachment markup
+    const textContent = decryptedContent.replace(attachmentRegex, '').trim();
+    const hasText = textContent.length > 0;
+    
+    setHaveAttachment(hasAttachment);
+    setHaveText(hasText);
+  }, [decryptedContent]);
 
   useEffect(() => {
     const decrypt = async () => {
@@ -421,12 +442,13 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
     }
     setShowMenu(!showMenu);
   };
+  
 
   // Handle image-only messages without bubble
-  if (isImageOnly) {
+  /*if (isImageOnly) {
     return (
       <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
-        {/* Three-dot menu for sent messages - only show if there's text content */}
+        {/* Three-dot menu for sent messages - only show if there's text content *}
         {false && (
           <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
             <button
@@ -440,7 +462,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
             
             {showMenu && (
               <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
-                {/* Only show Edit button if message has text content */}
+                {/* Only show Edit button if message has text content *}
                 {(() => {
                   const { text } = parseMessageWithAttachment(decryptedContent);
                   return text.trim() && (
@@ -514,11 +536,122 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
         </div>
       </div>
     );
-  }
+  }*/
 
   return (
     <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages */}
+      {!isReceived && decryptedContent !== '[deleted]' && (
+        <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
+          <button
+            onClick={toggleMenu}
+            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
+          {showMenu && (
+            <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
+              {haveText && (
+                <button
+                    onClick={handleEditClick}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit</span>
+                  </button>
+              )}
+              <button
+                onClick={handleDeleteClick}
+                className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      <div className="flex flex-col space-y-1">
+        { haveText && text.trim() && (
+          <div className={`max-w-xs lg:max-w-md ${
+            isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
+          } rounded-2xl px-4 py-2 shadow-sm`}>
+          {decryptedContent === '[deleted]' ? (
+            <p className={`text-sm italic ${
+              isReceived 
+                ? 'text-gray-500 dark:text-gray-400' 
+                : 'text-blue-200'
+            }`}>
+              This message has been deleted
+            </p>
+          ) : (
+            <p className="text-sm">{text}</p>
+          )}
+          {decryptedContent !== '[deleted]' && (
+            <div className="flex items-center justify-between mt-1">
+              <div className="flex items-center space-x-1">
+                <p className={`text-xs ${isReceived ? 'text-gray-500 dark:text-gray-400' : 'text-blue-100'}`}>
+                  {formatMessageTime(message.created_at)}
+                </p>
+                {!isReceived && (
+                  <div className="flex items-center ml-1">
+                    {message.status === 'sent' && (
+                      <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                      </svg>
+                    )}
+                    {message.status === 'delivered' && (
+                      <div className="flex">
+                        <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <svg className="w-3 h-3 text-blue-100 -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                    {message.status === 'read' && (
+                      <div className="flex">
+                        <svg className="w-3 h-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                        <svg className="w-3 h-3 text-green-300 -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          </div>
+        )}
+        { haveAttachment && ( /* If have no text, forcibly, it should have attachment */
+          <>
+            {(attachment?.fileName && <FileAttachmentComponent 
+              attachment={attachment!} 
+              isReceived={isReceived}
+              isLastUserMessage={isLastUserMessage}
+              onEditClick={!isReceived ? () => onEditClick?.(message, decryptedContent) : undefined}
+              onDeleteClick={!isReceived ? () => onDeleteClick?.(message) : undefined}
+            />)}
+          </>
+        )}
+      </div>
+    </div>
+  )
+
+  return (
+    <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+      {/* Three-dot menu for sent messages */}
+      eh { haveText && "haveText" } { haveAttachment && "haveAttachment" }
       {!isReceived && decryptedContent !== '[deleted]' && text.trim() && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
           <button
@@ -620,7 +753,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
         )}
         
         {/* Show attachment if present */}
-        {attachment && (
+        {/*{attachment && (
           <FileAttachmentComponent 
             attachment={attachment} 
             isReceived={isReceived}
@@ -628,7 +761,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
             onEditClick={!isReceived && text.trim() ? () => onEditClick?.(message, decryptedContent) : undefined}
             onDeleteClick={!isReceived ? () => onDeleteClick?.(message) : undefined}
           />
-        )}
+        )}*/}
       </div>
     </div>
   );
