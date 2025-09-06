@@ -20,7 +20,7 @@ interface Notice extends Msg {
 /**
  * The channel-id should be the user-id
  */
-export const useMessages = (channel: string = 'chat', currentUserId?: string, token?: string, conversationId?: string, publicKeyId?: string) => {
+export const useMessages = (channel: string = 'chat', currentUserId?: string, token?: string, conversationId?: string, publicKeyId?: string, onPublicKey?: () => void) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -103,6 +103,7 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
 
     // Listen to message events
     channelInstance.bind('message-sent', (data: Msg) => {
+      console.log('message-sent received', data);
       // Only process messages that match the user's public_key_id
       if (!publicKeyId || data.public_key_id === publicKeyId) {
         // For real-time messages, check if read acknowledgment is needed
@@ -111,6 +112,7 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
     });
 
     channelInstance.bind('message-updated', (data: Msg) => {
+      console.log('message-updated received', data);
       // Only process messages that match the user's public_key_id
       if (!publicKeyId || data.public_key_id === publicKeyId) {
         // For updated messages, check if read acknowledgment is needed
@@ -120,10 +122,19 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
 
     // Listen to message status updates (from read acknowledgments)
     channelInstance.bind('message-status-updated', (data: Msg) => {
+      console.log('message-status-updated received', data);
+      const public_key_id = (data as any).public_key_id;
       // Only process messages that match the user's public_key_id
       if (!publicKeyId || data.public_key_id === publicKeyId) {
         // For status updates, don't trigger read acknowledgment to avoid loops
         addOrUpdateMessage(data, false);
+        
+        // Trigger public key refresh callback when receiving message status updates
+        // This allows ConversationDetail to detect if it needs to refresh public keys
+        if (onPublicKey) {
+          console.log("Triggering onPublicKey callback from message-status-updated");
+          onPublicKey();
+        }
       }
     });
 

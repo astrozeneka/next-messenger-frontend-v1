@@ -458,15 +458,7 @@ interface ConversationDetailProps {
 
 export default function ConversationDetail({ conversationId, onBack }: ConversationDetailProps) {
   const { token, user } = useAuth();
-  const { messages, isConnected, initializeMessages, prependMessages } = useMessages(
-    `conversation.${conversationId}`,
-    user?.id,
-    token || undefined,
-    conversationId,
-    (user?.public_key as any)?.id
-  );
-  //const { updateUnreadCount } = useConversations(user?.id, token || undefined);
-
+  
   const [message, setMessage] = useState('');
   const [isSending, setIsSending] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
@@ -483,6 +475,51 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
   const [editingMessageContent, setEditingMessageContent] = useState<string>('');
+
+  // Function to check and refresh public keys if needed
+  const handlePublicKeyCheck = useCallback(async () => {
+    if (!token || !remoteUser) return;
+    
+    try {
+      const response = await fetch(`/api/conversations/${conversationId}/users`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+          'Accept': 'application/json'
+        }
+      });
+      const data = await response.json();
+      
+      if (data.length !== 1) {
+        console.error('Unexpected number of remote users:', data);
+        return;
+      }
+      
+      const updatedRemoteUser = data[0];
+      
+      // Compare current public keys with updated ones
+      const currentKeyIds = remoteUser.public_keys.map(key => key.id);
+      const updatedKeyIds = updatedRemoteUser.public_keys.map((key: any) => key.id);
+      
+      // Check if there are new keys that we don't have
+      const hasNewKeys = updatedKeyIds.some((keyId: string) => !currentKeyIds.includes(keyId));
+      
+      if (hasNewKeys) {
+        console.log('New public keys detected, refreshing user data');
+        setRemoteUser(updatedRemoteUser);
+      }
+    } catch (error) {
+      console.error('Error checking public keys:', error);
+    }
+  }, [token, conversationId, remoteUser]);
+  const { messages, isConnected, initializeMessages, prependMessages } = useMessages(
+    `conversation.${conversationId}`,
+    user?.id,
+    token || undefined,
+    conversationId,
+    (user?.public_key as any)?.id,
+    handlePublicKeyCheck
+  );
+  //const { updateUnreadCount } = useConversations(user?.id, token || undefined);
 
   // Used for managing pagination
   let [furthestId, setFurthestId] = useState<number | null>(null);
