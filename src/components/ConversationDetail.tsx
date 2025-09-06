@@ -669,6 +669,8 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
   const [editingMessageContent, setEditingMessageContent] = useState<string>('');
   const [fileSizeError, setFileSizeError] = useState<string>('');
+  const [uploadProgress, setUploadProgress] = useState<number>(0);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
 
   // Use useRef to always have access to the latest remoteUser value
@@ -901,6 +903,9 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
       let messageToSend = message.trim();
 
       if (selectedFile) {
+        setIsUploading(true);
+        setUploadProgress(0);
+        
         const presignedResponse = await fetch('/api/upload/presigned-url', {
           method: 'POST',
           headers: {
@@ -919,21 +924,40 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
 
         const { presignedUrl, key } = await presignedResponse.json();
 
-        const uploadResponse = await fetch(presignedUrl, {
-          method: 'PUT',
-          body: selectedFile,
-          headers: {
-            'Content-Type': selectedFile.type,
-          },
-        });
+        // Use XMLHttpRequest for progress tracking
+        await new Promise<void>((resolve, reject) => {
+          const xhr = new XMLHttpRequest();
+          
+          xhr.upload.addEventListener('progress', (event) => {
+            if (event.lengthComputable) {
+              const progress = Math.round((event.loaded / event.total) * 100);
+              setUploadProgress(progress);
+            }
+          });
 
-        if (!uploadResponse.ok) {
-          throw new Error('Failed to upload file');
-        }
+          xhr.addEventListener('load', () => {
+            if (xhr.status >= 200 && xhr.status < 300) {
+              resolve();
+            } else {
+              reject(new Error('Failed to upload file'));
+            }
+          });
+
+          xhr.addEventListener('error', () => {
+            reject(new Error('Upload failed'));
+          });
+
+          xhr.open('PUT', presignedUrl);
+          xhr.setRequestHeader('Content-Type', selectedFile.type);
+          xhr.send(selectedFile);
+        });
 
         const fileUrl = `https://next-messenger.s3.ap-southeast-1.amazonaws.com/${key}`;
         const fileInfo = `(${selectedFile.name})[${fileUrl}]`;
         messageToSend = messageToSend ? `${messageToSend} ${fileInfo}` : fileInfo;
+        
+        setIsUploading(false);
+        setTimeout(() => {setUploadProgress(0);}, 500);
 
         console.log('File uploaded successfully:', key);
       }
@@ -979,6 +1003,8 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
       }
     } catch (error) {
       console.error('Error sending message -:', error);
+      setIsUploading(false);
+      setUploadProgress(0);
     } finally {
       setIsSending(false);
     }
@@ -1245,6 +1271,43 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             <span className="text-gray-600 dark:text-gray-300"> Click "Update" to save changes or "Cancel" to stop editing.</span>
           </div>
         )}
+        {/* Selected File Preview */}
+        {selectedFile && (
+          <div className="mb-3 p-3 bg-gray-50 dark:bg-gray-600 border border-gray-200 dark:border-gray-600 rounded-lg relative" style={{overflow: 'hidden'}}>
+            <div className="flex items-center justify-between">
+              <div className="flex items-center space-x-2">
+                <svg className="w-5 h-5 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+                <div>
+                  <div className="text-sm font-medium text-gray-700 dark:text-gray-200">{selectedFile.name}</div>
+                  <div className="text-xs text-gray-500 dark:text-gray-400">{Math.round(selectedFile.size / 1024)} KB</div>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setSelectedFile(null);
+                  const fileInput = document.getElementById(`file-input-${conversationId}`) as HTMLInputElement;
+                  if (fileInput) {
+                    fileInput.value = '';
+                  }
+                }}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded-full"
+              >
+                <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="absolute bottom-0 left-0 w-full h-1 bg-gray-200 dark:bg-gray-500 mt-2">
+              <div 
+                className="h-full bg-blue-500 rounded-full transition-all duration-300 ease-out"
+                style={{ width: `${uploadProgress}%` }}
+              ></div>
+            </div>
+          </div>
+        )}
+        
         <div className="flex items-center space-x-3">
           <div className="flex-1 flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2">
             <input
@@ -1304,6 +1367,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
           )}
         </div>
 
+
         <input
           id={`file-input-${conversationId}`}
           type="file"
@@ -1311,11 +1375,6 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
           className="hidden"
         />
 
-        {selectedFile && (
-          <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
-            Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
-          </div>
-        )}
         
         {fileSizeError && (
           <div className="text-sm text-red-600 dark:text-red-400 mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
