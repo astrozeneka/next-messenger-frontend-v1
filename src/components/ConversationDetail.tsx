@@ -137,9 +137,10 @@ function EncryptionNotice() {
 
 interface ConversationDetailProps {
   conversationId: string;
+  onBack?: () => void;
 }
 
-export default function ConversationDetail({ conversationId }: ConversationDetailProps) {
+export default function ConversationDetail({ conversationId, onBack }: ConversationDetailProps) {
   const { token, user } = useAuth();
   const { messages, isConnected, initializeMessages, prependMessages } = useMessages(
     `conversation.${conversationId}`,
@@ -510,6 +511,18 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
       {/* Chat Header */}
       <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
         <div className="flex items-center space-x-3">
+          {/* Mobile back button - only show on mobile when onBack prop is provided */}
+          {onBack && (
+            <button
+              onClick={onBack}
+              className="md:hidden p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full mr-2"
+              aria-label="Go back"
+            >
+              <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+              </svg>
+            </button>
+          )}
           <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
             {remoteUser.name.charAt(0).toUpperCase()}
           </div>
@@ -552,7 +565,15 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         ))}
         
         {messages.length === 0 && (
-          <p className="text-gray-500 dark:text-gray-400 text-center">No messages yet...</p>
+          <div className="flex flex-col items-center justify-center py-12">
+            <div className="w-16 h-16 mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+              <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12l-4-4h3V6h2v4h3l-4 4z"/>
+              </svg>
+            </div>
+            <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">No messages yet</h3>
+            <p className="text-gray-500 dark:text-gray-400 text-sm text-center">Send a message to start the conversation</p>
+          </div>
         )}
 
         {isLoadingMore && (

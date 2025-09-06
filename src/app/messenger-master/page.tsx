@@ -23,7 +23,7 @@ function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessa
   useEffect(() => {
     const decrypt = async () => {
       if (!message) {
-        setDecryptedContent('No messages yet');
+        setDecryptedContent('No recent messages');
         setIsDecrypting(false);
         return;
       }
@@ -158,8 +158,15 @@ export default function MessengerMaster() {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div>Loading...</div>
+      <div className="min-h-screen flex items-center justify-center bg-gray-100 dark:bg-gray-900">
+        <div className="flex flex-col items-center space-y-4">
+          <div className="flex space-x-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+          </div>
+          <div className="text-gray-600 dark:text-gray-400 text-sm">Loading conversations...</div>
+        </div>
       </div>
     );
   }
@@ -261,9 +268,14 @@ export default function MessengerMaster() {
               ))}
             </div>
           ) : (
-            <div className="p-4 text-center text-gray-500">
-              <div className="text-4xl mb-2">💬</div>
-              <p>No conversations yet</p>
+            <div className="flex-1 flex flex-col items-center justify-center p-8 text-center">
+              <div className="w-16 h-16 mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
+                <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
+                  <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
+                </svg>
+              </div>
+              <h3 className="text-lg font-semibold text-gray-700 dark:text-gray-200 mb-2">No conversations yet</h3>
+              <p className="text-gray-500 dark:text-gray-400 text-sm">Start a new conversation to begin messaging</p>
             </div>
           )}
         </div>
@@ -282,24 +294,11 @@ export default function MessengerMaster() {
 
       {/* Mobile Popup Overlay */}
       {isMobile && showMobilePopup && selectedConversationId && (
-        <div className="fixed inset-0 z-50 bg-white">
-          <div className="flex flex-col h-full">
-            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
-              <button
-                onClick={closeMobilePopup}
-                className="p-2 hover:bg-gray-100 rounded-full"
-                aria-label="Close conversation"
-              >
-                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-                </svg>
-              </button>
-              <div className="flex-1" />
-            </div>
-            <div className="flex-1 overflow-hidden">
-              <ConversationDetail conversationId={selectedConversationId} />
-            </div>
-          </div>
+        <div className="fixed inset-0 z-50 bg-white dark:bg-gray-900">
+          <ConversationDetail 
+            conversationId={selectedConversationId} 
+            onBack={closeMobilePopup}
+          />
         </div>
       )}
     </div>
