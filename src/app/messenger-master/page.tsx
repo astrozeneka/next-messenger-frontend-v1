@@ -80,6 +80,7 @@ export default function MessengerMaster() {
 
   const [selectedConversationId, setSelectedConversationId] = useState<string | null>(null);
   const [isMobile, setIsMobile] = useState(false);
+  const [showMobilePopup, setShowMobilePopup] = useState(false);
 
   useEffect(() => {
     if (!loading && !isAuthenticated) {
@@ -168,10 +169,16 @@ export default function MessengerMaster() {
     updateUnreadCount(conversationId, 0);
     
     if (isMobile) {
-      router.push(`/messenger-detail/${conversationId}`);
+      setSelectedConversationId(conversationId);
+      setShowMobilePopup(true);
     } else {
       setSelectedConversationId(conversationId);
     }
+  };
+
+  const closeMobilePopup = () => {
+    setShowMobilePopup(false);
+    setSelectedConversationId(null);
   };
 
   return (
@@ -244,6 +251,29 @@ export default function MessengerMaster() {
         ) : (
           <ConversationPlaceholder />
         )
+      )}
+
+      {/* Mobile Popup Overlay */}
+      {isMobile && showMobilePopup && selectedConversationId && (
+        <div className="fixed inset-0 z-50 bg-white">
+          <div className="flex flex-col h-full">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200 bg-white">
+              <button
+                onClick={closeMobilePopup}
+                className="p-2 hover:bg-gray-100 rounded-full"
+                aria-label="Close conversation"
+              >
+                <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <div className="flex-1" />
+            </div>
+            <div className="flex-1 overflow-hidden">
+              <ConversationDetail conversationId={selectedConversationId} />
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );
