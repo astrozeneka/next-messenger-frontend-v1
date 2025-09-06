@@ -128,8 +128,9 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
-  const [menuPosition, setMenuPosition] = useState<'right' | 'left'>('right');
+  const [menuPosition, setMenuPosition] = useState<{ horizontal: 'right' | 'left', vertical: 'top' | 'bottom' }>({ horizontal: 'right', vertical: 'bottom' });
   const menuRef = useRef<HTMLDivElement>(null);
+  const messageRef = useRef<HTMLDivElement>(null);
   
   const { text, attachment } = parseMessageWithAttachment(decryptedContent);
   const isImage = attachment && /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(attachment.fileName);
@@ -200,20 +201,45 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   };
 
   const toggleMenu = () => {
-    if (!showMenu && menuRef.current) {
-      // Calculate if menu would overflow on the right side
+    if (!showMenu && menuRef.current && messageRef.current) {
+      // Get message container (the scrollable area)
+      const messageContainer = messageRef.current.closest('[style*="flex-direction: column-reverse"]') as HTMLElement;
+      
       const menuElement = menuRef.current;
-      const rect = menuElement.getBoundingClientRect();
+      const menuRect = menuElement.getBoundingClientRect();
+      const containerRect = messageContainer?.getBoundingClientRect();
+      
       const menuWidth = 128; // w-32 = 128px
+      const menuHeight = 80; // Approximate menu height
       const screenWidth = window.innerWidth;
       const padding = 16; // Some padding from screen edge
       
-      // If menu would overflow, position it to the left
-      if (rect.right + menuWidth > screenWidth - padding) {
-        setMenuPosition('left');
-      } else {
-        setMenuPosition('right');
+      // Calculate horizontal position
+      let horizontal: 'right' | 'left' = 'right';
+      if (menuRect.right + menuWidth > screenWidth - padding) {
+        // Check if positioning to the left would still keep menu on screen
+        if (menuRect.left - menuWidth >= padding) {
+          horizontal = 'left';
+        }
+        // If both left and right would overflow, keep it right (better UX)
       }
+      
+      // Calculate vertical position
+      let vertical: 'top' | 'bottom' = 'bottom';
+      if (containerRect) {
+        const messageTop = menuRect.top;
+        const containerTop = containerRect.top;
+        const containerHeight = containerRect.height;
+        const messagePositionInContainer = (messageTop - containerTop) / containerHeight;
+        
+        // If message is in upper half of container, show menu below (bottom)
+        // If message is in lower half of container, show menu above (top)
+        if (messagePositionInContainer > 0.5) {
+          vertical = 'top';
+        }
+      }
+      
+      setMenuPosition({ horizontal, vertical });
     }
     setShowMenu(!showMenu);
   };
@@ -221,7 +247,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   // Handle image-only messages without bubble
   if (isImageOnly) {
     return (
-      <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+      <div ref={messageRef} className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
         {/* Three-dot menu for sent messages */}
         {!isReceived && (
           <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
@@ -235,7 +261,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
             </button>
             
             {showMenu && (
-              <div className={`absolute ${menuPosition === 'right' ? 'right-0' : 'left-0'} top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
+              <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
                 {/* Only show Edit button if message has text content */}
                 {(() => {
                   const { text } = parseMessageWithAttachment(decryptedContent);
@@ -307,7 +333,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   }
 
   return (
-    <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+    <div ref={messageRef} className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages */}
       {!isReceived && decryptedContent !== '[deleted]' && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
@@ -321,7 +347,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
           </button>
           
           {showMenu && (
-            <div className={`absolute ${menuPosition === 'right' ? 'right-0' : 'left-0'} top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
+            <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
               {/* Only show Edit button if message has text content */}
               {(() => {
                 const { text } = parseMessageWithAttachment(decryptedContent);
@@ -1000,7 +1026,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
           <button
             onClick={handleMessageSend}
             disabled={isSending || (!message.trim() && !selectedFile)}
-            className={`p-2 rounded-full inline-block w-10 h-10 ${
+            className={`p-2 rounded-full w-10 h-10 flex items-center justify-center ${
               isSending || (!message.trim() && !selectedFile)
                 ? 'bg-gray-400 cursor-not-allowed text-white' 
                 : editingMessage
