@@ -45,6 +45,7 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
         const entities = await prisma.$transaction(async (tx) => {
             const createdMessages = [];
             for (const msg of messages) {
+                const now = new Date();
                 const entity = await tx.msgs.create({
                     data: {
                         conversation_id,
@@ -52,7 +53,9 @@ export const POST = withAuth(async (request: AuthenticatedRequest) => {
                         content: msg.content,
                         public_key_id: parseInt(msg.public_key_id),
                         batch_id: batchId,
-                        status: 'sent' // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
+                        status: 'sent', // Possible are 'sent', 'delivered', 'read' (sending is only available for front-end)
+                        created_at: now,
+                        updated_at: now
                     }
                 });
                 createdMessages.push(entity);

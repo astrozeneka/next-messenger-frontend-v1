@@ -4,6 +4,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useMessages } from "@/hooks/useMessages";
 // import { useConversations } from "@/hooks/useConversations";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
+import { formatMessageTime } from "@/lib/dateUtils";
 import { useCallback, useEffect, useState } from "react";
 
 export interface Msg {
@@ -52,8 +53,12 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
 
   if (isDecrypting) {
     return (
-      <div className="mb-2">
-        <span className="font-bold">REMOTE:</span> <span className="italic text-gray-500">Decrypting...</span>
+      <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'}`}>
+        <div className={`max-w-xs lg:max-w-md ${
+          isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
+        } rounded-2xl px-4 py-2 shadow-sm`}>
+          <p className="text-sm italic">Decrypting...</p>
+        </div>
       </div>
     );
   }
@@ -65,16 +70,56 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
   };
 
   return (
-    <div className="mb-2">
-      <span className="font-bold">REMOTE:</span> {decryptedContent} [{message.status}]
-      {!isReceived && (
-        <button 
-          onClick={handleEditClick}
-          className="text-xs text-gray-500 hover:text-blue-500 ml-1"
-        >
-          (Edit)
-        </button>
-      )}
+    <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'}`}>
+      <div className={`max-w-xs lg:max-w-md ${
+        isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
+      } rounded-2xl px-4 py-2 shadow-sm`}>
+        <p className="text-sm">{decryptedContent}</p>
+        <div className="flex items-center justify-between mt-1">
+          <div className="flex items-center space-x-1">
+            <p className={`text-xs ${isReceived ? 'text-gray-500 dark:text-gray-400' : 'text-blue-100'}`}>
+              {formatMessageTime(message.created_at)}
+            </p>
+            {!isReceived && (
+              <div className="flex items-center ml-1">
+                {message.status === 'sent' && (
+                  <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
+                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                  </svg>
+                )}
+                {message.status === 'delivered' && (
+                  <div className="flex">
+                    <svg className="w-3 h-3 text-blue-100" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <svg className="w-3 h-3 text-blue-100 -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+                {message.status === 'read' && (
+                  <div className="flex">
+                    <svg className="w-3 h-3 text-green-300" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                    <svg className="w-3 h-3 text-green-300 -ml-1" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                    </svg>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+          {!isReceived && (
+            <button 
+              onClick={handleEditClick}
+              className="text-xs text-blue-100 hover:text-white ml-2"
+            >
+              Edit
+            </button>
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -462,73 +507,119 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
 
   return (
     <div className="flex flex-col h-full flex-1">
-      <div className="border-b p-4">
-        <h2 className="text-xl font-bold">Chat with {remoteUser.name} - hmm { hasMoreMessages }</h2>
-        <div className="text-sm text-gray-500 flex gap-4">
-          <span>{isConnected ? '🟢 Connected' : '🔴 Disconnected'}</span>
-          <span>Conversation ID: {conversationId}</span>
+      {/* Chat Header */}
+      <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+        <div className="flex items-center space-x-3">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+            {remoteUser.name.charAt(0).toUpperCase()}
+          </div>
+          <div>
+            <h2 className="font-semibold text-gray-800 dark:text-white">{remoteUser.name}</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400">
+              {isConnected ? 'Online' : 'Last seen recently'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center space-x-2">
+          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
+            </svg>
+          </button>
+          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+            </svg>
+          </button>
+          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+          </button>
         </div>
       </div>
 
-      <div className="flex-1 bg-gray-100 p-4 overflow-y-auto min-h-0" style={{ display: 'flex', flexDirection: 'column-reverse' }} onScroll={handleScroll}>
-
-
-        
+      {/* Messages Container */}
+      <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900" style={{ display: 'flex', flexDirection: 'column-reverse' }} onScroll={handleScroll}>
         {messages.slice().reverse().map((msg) => (
-          <div key={msg.id}>
-            <DecryptedMessage
-              message={msg}
-              encryptionKey={user?.private_key!}
-              isReceived={msg.sender_id !== user?.id}
-              onEditClick={handleStartEdit}
-            />
-          </div>
+          <DecryptedMessage
+            key={msg.id}
+            message={msg}
+            encryptionKey={user?.private_key!}
+            isReceived={msg.sender_id !== user?.id}
+            onEditClick={handleStartEdit}
+          />
         ))}
         
-        
         {messages.length === 0 && (
-          <p className="text-gray-500 text-center">No messages yet...</p>
+          <p className="text-gray-500 dark:text-gray-400 text-center">No messages yet...</p>
         )}
 
-        { isLoadingMore && (<span>Loading ...</span>)}
-
-
-        {!hasMoreMessages && (<EncryptionNotice />)}
-      </div>
-
-      <div className="border-t p-4">
-        {editingMessage && (
-          <div className="mb-2 p-2 bg-yellow-100 border border-yellow-300 rounded text-sm">
-            <span className="font-medium">Editing message:</span> Click "Update" to save changes or "Cancel" to stop editing.
+        {isLoadingMore && (
+          <div className="text-center text-gray-500 dark:text-gray-400">
+            <span>Loading more messages...</span>
           </div>
         )}
-        <div className="flex space-x-2">
-          <input
-            type="text"
-            value={message}
-            onChange={(e) => setMessage(e.target.value)}
-            placeholder={editingMessage ? "Edit your message..." : "Type a message..."}
-            className={`flex-1 px-3 py-2 border rounded-md ${
-              editingMessage 
-                ? 'border-yellow-400 bg-yellow-50' 
-                : 'border-gray-300'
-            }`}
-          />
+
+        {!hasMoreMessages && messages.length > 0 && (<EncryptionNotice />)}
+      </div>
+
+      {/* Message Input */}
+      <div className="bg-white dark:bg-gray-800 border-t border-gray-200 dark:border-gray-700 p-4">
+        {editingMessage && (
+          <div className="mb-2 p-2 bg-yellow-100 dark:bg-yellow-900/30 border border-yellow-300 dark:border-yellow-600 rounded text-sm">
+            <span className="font-medium text-gray-800 dark:text-gray-200">Editing message:</span> 
+            <span className="text-gray-600 dark:text-gray-300"> Click "Update" to save changes or "Cancel" to stop editing.</span>
+          </div>
+        )}
+        <div className="flex items-center space-x-3">
+          <div className="flex-1 flex items-center space-x-2 bg-gray-100 dark:bg-gray-700 rounded-full px-4 py-2">
+            <input
+              type="text"
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              placeholder={editingMessage ? "Edit your message..." : "Type a message..."}
+              className={`flex-1 bg-transparent focus:outline-none text-gray-800 dark:text-white ${
+                editingMessage ? 'placeholder-orange-400 dark:placeholder-orange-300' : 'placeholder-gray-500 dark:placeholder-gray-400'
+              }`}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') {
+                  handleMessageSend();
+                }
+              }}
+            />
+            {!editingMessage && (
+              <button
+                onClick={handleSendFileClick}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full inline-block w-8 h-8"
+              >
+                <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
+                </svg>
+              </button>
+            )}
+          </div>
           <button
             onClick={handleMessageSend}
             disabled={isSending || (!message.trim() && !selectedFile)}
-            className={`px-4 py-2 text-white rounded-md ${
+            className={`p-2 rounded-full inline-block w-10 h-10 ${
               isSending || (!message.trim() && !selectedFile)
-                ? 'bg-gray-400 cursor-not-allowed' 
+                ? 'bg-gray-400 cursor-not-allowed text-white' 
                 : editingMessage
-                  ? 'bg-orange-600 hover:bg-orange-700'
-                  : 'bg-blue-600 hover:bg-blue-700'
+                  ? 'bg-orange-600 hover:bg-orange-700 text-white'
+                  : 'bg-blue-500 hover:bg-blue-600 text-white'
             }`}
           >
-            {isSending 
-              ? (editingMessage ? 'Updating...' : 'Sending...') 
-              : (editingMessage ? 'Update' : 'Send')
-            }
+            {isSending ? (
+              <svg className="w-5 h-5 animate-spin" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+            ) : (
+              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 24 24">
+                <path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/>
+              </svg>
+            )}
           </button>
           {editingMessage && (
             <button
@@ -536,18 +627,6 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
               className="px-4 py-2 bg-gray-500 text-white rounded-md hover:bg-gray-600"
             >
               Cancel
-            </button>
-          )}
-          {!editingMessage && (
-            <button
-              onClick={handleSendFileClick}
-              className={`px-4 py-2 text-white rounded-md ${
-                selectedFile
-                  ? 'bg-orange-600 hover:bg-orange-700'
-                  : 'bg-green-600 hover:bg-green-700'
-              }`}
-            >
-              {selectedFile ? 'File Selected' : 'Send File'}
             </button>
           )}
         </div>
@@ -560,7 +639,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         />
 
         {selectedFile && (
-          <div className="text-sm text-gray-600 mt-2">
+          <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
             Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
           </div>
         )}

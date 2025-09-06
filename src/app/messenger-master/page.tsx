@@ -6,6 +6,7 @@ import { useEffect, useState } from 'react';
 import { useMessages } from '../../hooks/useMessages';
 import { useConversations } from '../../hooks/useConversations';
 import { getPrivateKey, decryptMessage } from '../../lib/crypto';
+import { formatMessageTime } from '../../lib/dateUtils';
 import { Msg } from '../messenger-detail/[id]/page';
 import ConversationDetail from '../../components/ConversationDetail';
 
@@ -61,15 +62,15 @@ function DecryptedLatestMessage({ message, encryptionKey }: DecryptedLatestMessa
 
 function ConversationPlaceholder() {
   return (
-    <div className="hidden md:flex w-2/3 items-center justify-center bg-gray-50">
+    <div className="hidden md:flex w-2/3 items-center justify-center bg-gray-50 dark:bg-gray-900">
       <div className="text-center">
-        <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
-          <svg className="w-8 h-8 text-gray-400" fill="currentColor" viewBox="0 0 24 24">
+        <div className="w-20 h-20 mx-auto mb-4 bg-gray-200 dark:bg-gray-700 rounded-full flex items-center justify-center">
+          <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
             <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2z"/>
           </svg>
         </div>
-        <h3 className="text-xl font-semibold text-gray-700 mb-2">No conversation selected</h3>
-        <p className="text-gray-500">Choose a conversation to start messaging</p>
+        <h3 className="text-xl font-semibold text-gray-700 dark:text-gray-200 mb-2">No conversation selected</h3>
+        <p className="text-gray-500 dark:text-gray-400">Choose a conversation to start messaging</p>
       </div>
     </div>
   );
@@ -185,20 +186,20 @@ export default function MessengerMaster() {
   };
 
   return (
-    <div className="flex h-screen">
+    <div className="flex h-screen bg-gray-100 dark:bg-gray-900">
       {/* Master View - Conversations List */}
-      <div className="w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col">
+      <div className="w-full md:w-1/3 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Header */}
-        <div className="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-800">Messages</h1>
+        <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Messages</h1>
           <div className="flex items-center space-x-3">
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
             </button>
-            <button className="p-2 hover:bg-gray-100 rounded-full">
-              <svg className="w-5 h-5 text-gray-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+              <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
               </svg>
             </button>
@@ -206,15 +207,15 @@ export default function MessengerMaster() {
         </div>
 
         {/* Search Bar */}
-        <div className="p-4 bg-gray-50">
+        <div className="p-4 bg-gray-50 dark:bg-gray-800/50">
           <div className="relative">
-            <svg className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <svg className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
             </svg>
             <input 
               type="text" 
               placeholder="Search conversations..." 
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
         </div>
@@ -226,8 +227,8 @@ export default function MessengerMaster() {
               {conversations.map((conversation) => (
                 <div
                   key={conversation.id}
-                  className={`conversation-item flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${
-                    selectedConversationId === conversation.conversation_id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''
+                  className={`conversation-item flex items-center p-4 hover:bg-gray-50 dark:hover:bg-gray-700 cursor-pointer border-b border-gray-100 dark:border-gray-700 ${
+                    selectedConversationId === conversation.conversation_id ? 'bg-blue-50 dark:bg-blue-900/30 border-l-4 border-l-blue-500' : ''
                   }`}
                   onClick={() => handleConversationClick(conversation.conversation_id)}
                 >
@@ -235,17 +236,17 @@ export default function MessengerMaster() {
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
                       {conversation.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>
+                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></div>
                   </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex items-center justify-between">
-                      <h3 className="font-semibold text-gray-800 truncate">{conversation.name}</h3>
-                      <span className="text-xs text-gray-500 flex-shrink-0">
-                        {conversation.latest_message ? 'Just now' : 'Yesterday'}
+                      <h3 className="font-semibold text-gray-800 dark:text-white truncate">{conversation.name}</h3>
+                      <span className="text-xs text-gray-500 dark:text-gray-400 flex-shrink-0">
+                        {conversation.latest_message ? formatMessageTime(conversation.latest_message.created_at) : '-'}
                       </span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <div className="text-sm text-gray-600 truncate">
+                      <div className="text-sm text-gray-600 dark:text-gray-300 truncate">
                         <DecryptedLatestMessage 
                           message={conversation.latest_message} 
                           encryptionKey={user.private_key} 
@@ -271,7 +272,7 @@ export default function MessengerMaster() {
       {/* Detail View - Chat Interface or Empty State */}
       {!isMobile && (
         selectedConversationId ? (
-          <div className="hidden md:flex w-full md:w-2/3 flex-col bg-gray-50">
+          <div className="hidden md:flex w-full md:w-2/3 flex-col bg-gray-50 dark:bg-gray-900">
             <ConversationDetail conversationId={selectedConversationId} />
           </div>
         ) : (
