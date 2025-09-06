@@ -33,46 +33,164 @@ function parseMessageWithAttachment(content: string): { text: string; attachment
   };
 }
 
-function FileAttachmentComponent({ attachment, isReceived }: { attachment: FileAttachment; isReceived: boolean }) {
+interface FileAttachmentComponentProps {
+  attachment: FileAttachment;
+  isReceived: boolean;
+  onEditClick?: () => void;
+  onDeleteClick?: () => void;
+}
+
+function FileAttachmentComponent({ 
+  attachment, 
+  isReceived, 
+  onEditClick, 
+  onDeleteClick
+}: FileAttachmentComponentProps) {
+  const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<{ horizontal: 'right' | 'left', vertical: 'top' | 'bottom' }>({ horizontal: 'right', vertical: 'bottom' });
+  const menuRef = useRef<HTMLDivElement>(null);
+  const attachmentRef = useRef<HTMLDivElement>(null);
   const isImage = /\.(jpg|jpeg|png|gif|webp|svg)$/i.test(attachment.fileName);
   
   const handleDownload = () => {
     window.open(attachment.url, '_blank');
   };
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
+  const toggleMenu = () => {
+    if (!showMenu && menuRef.current && attachmentRef.current) {
+      const messageContainer = attachmentRef.current.closest('[style*="flex-direction: column-reverse"]') as HTMLElement;
+      
+      const menuElement = menuRef.current;
+      const menuRect = menuElement.getBoundingClientRect();
+      const containerRect = messageContainer?.getBoundingClientRect();
+      
+      const menuWidth = 128;
+      const menuHeight = 80;
+      const screenWidth = window.innerWidth;
+      const padding = 16;
+      
+      let horizontal: 'right' | 'left' = 'right';
+      if (menuRect.right + menuWidth > screenWidth - padding) {
+        if (menuRect.left - menuWidth >= padding) {
+          horizontal = 'left';
+        }
+      }
+      
+      let vertical: 'top' | 'bottom' = 'bottom';
+      if (containerRect) {
+        const messageTop = menuRect.top;
+        const containerTop = containerRect.top;
+        const containerHeight = containerRect.height;
+        const messagePositionInContainer = (messageTop - containerTop) / containerHeight;
+        
+        if (messagePositionInContainer > 0.5) {
+          vertical = 'top';
+        }
+      }
+      
+      setMenuPosition({ horizontal, vertical });
+    }
+    setShowMenu(!showMenu);
+  };
+
   if (isImage) {
     return (
-      <div className="mt-1 max-w-xs lg:max-w-md rounded-lg overflow-hidden">
-        <img 
-          src={attachment.url} 
-          alt={attachment.fileName}
-          className="w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
-          onClick={handleDownload}
-          onError={(e) => {
-            const target = e.target as HTMLImageElement;
-            target.style.display = 'none';
-            target.nextElementSibling?.classList.remove('hidden');
-          }}
-        />
-        <div className="hidden bg-gray-100 dark:bg-gray-600 p-3 rounded-lg border">
-          <div className="flex items-center space-x-3">
-            <svg className="w-8 h-8 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-              <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
-            </svg>
-            <div className="flex-1 min-w-0">
-              <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-                {attachment.fileName}
-              </p>
-              <p className="text-xs text-gray-500 dark:text-gray-400">Image file</p>
-            </div>
+      <div ref={attachmentRef} className={`mt-1 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+        {/* Three-dot menu for sent messages with attachments */}
+        {!isReceived && (onEditClick || onDeleteClick) && (
+          <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
             <button
-              onClick={handleDownload}
-              className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded"
+              onClick={toggleMenu}
+              className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
             >
-              <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+              <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
               </svg>
             </button>
+            
+            {showMenu && (
+              <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
+                {onEditClick && (
+                  <button
+                    onClick={() => {
+                      onEditClick();
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit</span>
+                  </button>
+                )}
+                {onDeleteClick && (
+                  <button
+                    onClick={() => {
+                      onDeleteClick();
+                      setShowMenu(false);
+                    }}
+                    className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                    <span>Delete</span>
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+        )}
+
+        <div className="max-w-xs lg:max-w-md rounded-lg overflow-hidden">
+          <img 
+            src={attachment.url} 
+            alt={attachment.fileName}
+            className="w-full h-auto max-h-64 object-cover cursor-pointer hover:opacity-90 transition-opacity"
+            onClick={handleDownload}
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          <div className="hidden bg-gray-100 dark:bg-gray-600 p-3 rounded-lg border">
+            <div className="flex items-center space-x-3">
+              <svg className="w-8 h-8 text-red-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                <path fillRule="evenodd" d="M4 3a2 2 0 00-2 2v10a2 2 0 002 2h12a2 2 0 002-2V5a2 2 0 00-2-2H4zm12 12H4l4-8 3 6 2-4 3 6z" clipRule="evenodd" />
+              </svg>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+                  {attachment.fileName}
+                </p>
+                <p className="text-xs text-gray-500 dark:text-gray-400">Image file</p>
+              </div>
+              <button
+                onClick={handleDownload}
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded"
+              >
+                <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -80,25 +198,74 @@ function FileAttachmentComponent({ attachment, isReceived }: { attachment: FileA
   }
 
   return (
-    <div className="mt-1 bg-gray-100 dark:bg-gray-600 p-3 rounded-2xl max-w-xs lg:max-w-md">
-      <div className="flex items-center space-x-3">
-        <svg className="w-8 h-8 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
-          <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
-        </svg>
-        <div className="flex-1 min-w-0">
-          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
-            {attachment.fileName}
-          </p>
-          <p className="text-xs text-gray-500 dark:text-gray-400">File attachment</p>
+    <div ref={attachmentRef} className={`mt-1 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+      {/* Three-dot menu for sent messages with attachments */}
+      {!isReceived && (onEditClick || onDeleteClick) && (
+        <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
+          <button
+            onClick={toggleMenu}
+            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
+          
+          {showMenu && (
+            <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
+              {onEditClick && (
+                <button
+                  onClick={() => {
+                    onEditClick();
+                    setShowMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                  <span>Edit</span>
+                </button>
+              )}
+              {onDeleteClick && (
+                <button
+                  onClick={() => {
+                    onDeleteClick();
+                    setShowMenu(false);
+                  }}
+                  className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                  </svg>
+                  <span>Delete</span>
+                </button>
+              )}
+            </div>
+          )}
         </div>
-        <button
-          onClick={handleDownload}
-          className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded"
-        >
-          <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+      )}
+
+      <div className="bg-gray-100 dark:bg-gray-600 p-3 rounded-2xl max-w-xs lg:max-w-md">
+        <div className="flex items-center space-x-3">
+          <svg className="w-8 h-8 text-blue-500 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+            <path fillRule="evenodd" d="M4 4a2 2 0 012-2h4.586A2 2 0 0112 2.586L15.414 6A2 2 0 0116 7.414V16a2 2 0 01-2 2H6a2 2 0 01-2-2V4zm2 6a1 1 0 011-1h6a1 1 0 110 2H7a1 1 0 01-1-1zm1 3a1 1 0 100 2h6a1 1 0 100-2H7z" clipRule="evenodd" />
           </svg>
-        </button>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">
+              {attachment.fileName}
+            </p>
+            <p className="text-xs text-gray-500 dark:text-gray-400">File attachment</p>
+          </div>
+          <button
+            onClick={handleDownload}
+            className="p-1 hover:bg-gray-200 dark:hover:bg-gray-500 rounded"
+          >
+            <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -292,7 +459,12 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
         )}
         
         <div className="flex flex-col space-y-1">
-          <FileAttachmentComponent attachment={attachment!} isReceived={isReceived} />
+          <FileAttachmentComponent 
+            attachment={attachment!} 
+            isReceived={isReceived}
+            onEditClick={!isReceived ? () => onEditClick?.(message, decryptedContent) : undefined}
+            onDeleteClick={!isReceived ? () => onDeleteClick?.(message) : undefined}
+          />
           <div className={`flex items-center ${isReceived ? 'justify-start' : 'justify-end'}`}>
             <p className={`text-xs ${isReceived ? 'text-gray-500 dark:text-gray-400' : 'text-gray-500'}`}>
               {formatMessageTime(message.created_at)}
@@ -434,7 +606,12 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
         
         {/* Show attachment if present */}
         {attachment && (
-          <FileAttachmentComponent attachment={attachment} isReceived={isReceived} />
+          <FileAttachmentComponent 
+            attachment={attachment} 
+            isReceived={isReceived}
+            onEditClick={!isReceived ? () => onEditClick?.(message, decryptedContent) : undefined}
+            onDeleteClick={!isReceived ? () => onDeleteClick?.(message) : undefined}
+          />
         )}
       </div>
     </div>
