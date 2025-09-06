@@ -475,6 +475,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
   const [editingMessageContent, setEditingMessageContent] = useState<string>('');
+  const [fileSizeError, setFileSizeError] = useState<string>('');
 
 
   // Use useRef to always have access to the latest remoteUser value
@@ -793,6 +794,18 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (file) {
+      // Check file size (10MB = 10 * 1024 * 1024 bytes)
+      const maxSizeInBytes = 10 * 1024 * 1024;
+      if (file.size > maxSizeInBytes) {
+        setFileSizeError(`File size exceeds 10MB limit. Your file is ${(file.size / (1024 * 1024)).toFixed(1)}MB.`);
+        setSelectedFile(null);
+        // Clear the file input
+        event.target.value = '';
+        return;
+      }
+      
+      // Clear any previous error and set the file
+      setFileSizeError('');
       setSelectedFile(file);
       console.log('File selected:', file);
     }
@@ -1100,6 +1113,12 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
         {selectedFile && (
           <div className="text-sm text-gray-600 dark:text-gray-300 mt-2">
             Selected file: {selectedFile.name} ({Math.round(selectedFile.size / 1024)} KB)
+          </div>
+        )}
+        
+        {fileSizeError && (
+          <div className="text-sm text-red-600 dark:text-red-400 mt-2 p-2 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded">
+            {fileSizeError}
           </div>
         )}
       </div>
