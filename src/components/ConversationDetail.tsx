@@ -128,6 +128,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
+  const [menuPosition, setMenuPosition] = useState<'right' | 'left'>('right');
   const menuRef = useRef<HTMLDivElement>(null);
   
   const { text, attachment } = parseMessageWithAttachment(decryptedContent);
@@ -199,6 +200,21 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   };
 
   const toggleMenu = () => {
+    if (!showMenu && menuRef.current) {
+      // Calculate if menu would overflow on the right side
+      const menuElement = menuRef.current;
+      const rect = menuElement.getBoundingClientRect();
+      const menuWidth = 128; // w-32 = 128px
+      const screenWidth = window.innerWidth;
+      const padding = 16; // Some padding from screen edge
+      
+      // If menu would overflow, position it to the left
+      if (rect.right + menuWidth > screenWidth - padding) {
+        setMenuPosition('left');
+      } else {
+        setMenuPosition('right');
+      }
+    }
     setShowMenu(!showMenu);
   };
 
@@ -219,7 +235,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
             </button>
             
             {showMenu && (
-              <div className="absolute right-0 top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+              <div className={`absolute ${menuPosition === 'right' ? 'right-0' : 'left-0'} top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
                 {/* Only show Edit button if message has text content */}
                 {(() => {
                   const { text } = parseMessageWithAttachment(decryptedContent);
@@ -305,7 +321,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
           </button>
           
           {showMenu && (
-            <div className="absolute right-0 top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+            <div className={`absolute ${menuPosition === 'right' ? 'right-0' : 'left-0'} top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
               {/* Only show Edit button if message has text content */}
               {(() => {
                 const { text } = parseMessageWithAttachment(decryptedContent);
