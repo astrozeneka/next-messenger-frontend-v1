@@ -423,20 +423,22 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
   };
 
   // Handle image-only messages without bubble
+  // The code below is not used, will be deleted later
   if (isImageOnly) {
     return (
       <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+        <span>IMAGE ONLY IMAGE ONLY</span>
         {/* Three-dot menu for sent messages - only show if there's text content */}
-        {false && (
+        {true && (
           <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
-            <button
+            {<button
               onClick={toggleMenu}
               className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
             >
               <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
                 <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
               </svg>
-            </button>
+            </button>}
             
             {showMenu && (
               <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
@@ -462,7 +464,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                   </svg>
-                  <span>Delete</span>
+                  <span>DeleteFFF</span>
                 </button>
               </div>
             )}
@@ -517,18 +519,18 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
   }
 
   return (
-    <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+    (!isImageOnly && <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages */}
       {!isReceived && decryptedContent !== '[deleted]' && text.trim() && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
-          <button
+          {/*<button
             onClick={toggleMenu}
             className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
           >
             <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
               <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
             </svg>
-          </button>
+          </button>*/}
           
           {showMenu && (
             <div className={`absolute ${menuPosition.horizontal === 'right' ? 'right-0' : 'left-0'} ${menuPosition.vertical === 'bottom' ? 'top-10' : 'bottom-10'} w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10`}>
@@ -630,7 +632,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessag
           />
         )}
       </div>
-    </div>
+    </div>)
   );
 }
 
