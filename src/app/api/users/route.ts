@@ -98,20 +98,26 @@ export const GET = withAuth(async (request: AuthenticatedRequest) => {
 
         // 3.B Calculate unread count (messages from other users that are not 'read')
         // Group by batch_id to avoid counting same message multiple times due to encryption per public key
+        const unreadWhereClause: any = {
+          conversation_id: parseInt(conversationId),
+          sender_id: {
+            not: parseInt(currentUser!.id)
+          },
+          status: {
+            in: ['sent', 'delivered']
+          },
+          batch_id: {
+            not: null
+          }
+        };
+        
+        if (public_key_id) {
+          unreadWhereClause.public_key_id = parseInt(public_key_id);
+        }
+        
         const unreadBatches = await prisma.msgs.groupBy({
           by: ['batch_id'],
-          where: {
-            conversation_id: parseInt(conversationId),
-            sender_id: {
-              not: parseInt(currentUser!.id)
-            },
-            status: {
-              in: ['sent', 'delivered']
-            },
-            batch_id: {
-              not: null
-            }
-          }
+          where: unreadWhereClause
         });
         const unreadCount = unreadBatches.length;
 
