@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Messenger - Master/Detail View</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-gray-100 font-sans">
+    <div class="flex h-screen">
+        <!-- Master View - Conversations List -->
+        <div id="masterView" class="w-full md:w-1/3 bg-white border-r border-gray-200 flex flex-col">
+            <!-- Header -->
+            <div class="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <h1 class="text-xl font-semibold text-gray-800">Messages</h1>
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-search text-gray-600"></i>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-edit text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="p-4 bg-gray-50">
+                <div class="relative">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                    <input type="text" placeholder="Search conversations..." 
+                           class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                </div>
+            </div>
+
+            <!-- Conversations List -->
+            <div class="flex-1 overflow-y-auto">
+                <div id="conversationsList">
+                    <!-- Conversations will be populated by JavaScript -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Detail View - Chat Interface -->
+        <div id="detailView" class="hidden md:flex w-full md:w-2/3 flex-col bg-gray-50">
+            <!-- Chat Header -->
+            <div id="chatHeader" class="bg-white border-b border-gray-200 p-4 flex items-center justify-between">
+                <div class="flex items-center space-x-3">
+                    <button id="backButton" class="md:hidden p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-arrow-left text-gray-600"></i>
+                    </button>
+                    <div class="w-10 h-10 bg-gray-300 rounded-full flex items-center justify-center">
+                        <i class="fas fa-user text-gray-600"></i>
+                    </div>
+                    <div>
+                        <h2 id="chatTitle" class="font-semibold text-gray-800">Select a conversation</h2>
+                        <p id="chatStatus" class="text-sm text-gray-500">Online status</p>
+                    </div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-phone text-gray-600"></i>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-video text-gray-600"></i>
+                    </button>
+                    <button class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-info-circle text-gray-600"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Messages Container -->
+            <div id="messagesContainer" class="flex-1 overflow-y-auto p-4 space-y-4">
+                <!-- Messages will be populated by JavaScript -->
+            </div>
+
+            <!-- Message Input -->
+            <div class="bg-white border-t border-gray-200 p-4">
+                <div class="flex items-center space-x-3">
+                    <button class="p-2 hover:bg-gray-100 rounded-full">
+                        <i class="fas fa-plus text-gray-600"></i>
+                    </button>
+                    <div class="flex-1 flex items-center space-x-2 bg-gray-100 rounded-full px-4 py-2">
+                        <input id="messageInput" type="text" placeholder="Type a message..." 
+                               class="flex-1 bg-transparent focus:outline-none text-gray-800">
+                        <button class="p-1 hover:bg-gray-200 rounded-full">
+                            <i class="fas fa-smile text-gray-600"></i>
+                        </button>
+                        <button class="p-1 hover:bg-gray-200 rounded-full">
+                            <i class="fas fa-paperclip text-gray-600"></i>
+                        </button>
+                    </div>
+                    <button id="sendButton" class="p-2 bg-blue-500 hover:bg-blue-600 text-white rounded-full">
+                        <i class="fas fa-paper-plane"></i>
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Empty State for Detail View -->
+        <div id="emptyState" class="hidden md:flex w-2/3 items-center justify-center bg-gray-50">
+            <div class="text-center">
+                <div class="w-20 h-20 mx-auto mb-4 bg-gray-200 rounded-full flex items-center justify-center">
+                    <i class="fas fa-comments text-gray-400 text-3xl"></i>
+                </div>
+                <h3 class="text-xl font-semibold text-gray-700 mb-2">No conversation selected</h3>
+                <p class="text-gray-500">Choose a conversation to start messaging</p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Dummy data
+        const conversations = [
+            {
+                id: 1,
+                name: "Alice Johnson",
+                avatar: "AJ",
+                lastMessage: "Hey! How are you doing?",
+                timestamp: "2 min ago",
+                online: true,
+                unread: 2
+            },
+            {
+                id: 2,
+                name: "Bob Smith",
+                avatar: "BS",
+                lastMessage: "Can we schedule a meeting tomorrow?",
+                timestamp: "1 hour ago",
+                online: false,
+                unread: 0
+            },
+            {
+                id: 3,
+                name: "Carol Williams",
+                avatar: "CW",
+                lastMessage: "Thanks for your help!",
+                timestamp: "3 hours ago",
+                online: true,
+                unread: 1
+            },
+            {
+                id: 4,
+                name: "David Brown",
+                avatar: "DB",
+                lastMessage: "See you later!",
+                timestamp: "Yesterday",
+                online: false,
+                unread: 0
+            },
+            {
+                id: 5,
+                name: "Emma Davis",
+                avatar: "ED",
+                lastMessage: "Perfect, sounds good 👍",
+                timestamp: "Yesterday",
+                online: true,
+                unread: 0
+            }
+        ];
+
+        const messages = {
+            1: [
+                { id: 1, sender: "Alice Johnson", content: "Hey there! How's your day going?", timestamp: "10:30 AM", sent: false },
+                { id: 2, sender: "You", content: "Hi Alice! It's going well, thanks for asking. How about yours?", timestamp: "10:32 AM", sent: true },
+                { id: 3, sender: "Alice Johnson", content: "Pretty good! Just finished a big project at work 🎉", timestamp: "10:35 AM", sent: false },
+                { id: 4, sender: "You", content: "That's awesome! Congratulations! What was the project about?", timestamp: "10:36 AM", sent: true },
+                { id: 5, sender: "Alice Johnson", content: "It was a new mobile app for our company. Took about 3 months to complete", timestamp: "10:38 AM", sent: false },
+                { id: 6, sender: "Alice Johnson", content: "Hey! How are you doing?", timestamp: "Just now", sent: false }
+            ],
+            2: [
+                { id: 1, sender: "Bob Smith", content: "Hi! Hope you're having a great week", timestamp: "Yesterday", sent: false },
+                { id: 2, sender: "You", content: "Hey Bob! Yes, it's been pretty good. What's up?", timestamp: "Yesterday", sent: true },
+                { id: 3, sender: "Bob Smith", content: "Can we schedule a meeting tomorrow?", timestamp: "1 hour ago", sent: false }
+            ],
+            3: [
+                { id: 1, sender: "You", content: "Here's the document you requested", timestamp: "4 hours ago", sent: true },
+                { id: 2, sender: "Carol Williams", content: "Thanks for your help!", timestamp: "3 hours ago", sent: false }
+            ]
+        };
+
+        let currentConversation = null;
+
+        // DOM elements
+        const conversationsList = document.getElementById('conversationsList');
+        const detailView = document.getElementById('detailView');
+        const emptyState = document.getElementById('emptyState');
+        const masterView = document.getElementById('masterView');
+        const chatTitle = document.getElementById('chatTitle');
+        const chatStatus = document.getElementById('chatStatus');
+        const messagesContainer = document.getElementById('messagesContainer');
+        const messageInput = document.getElementById('messageInput');
+        const sendButton = document.getElementById('sendButton');
+        const backButton = document.getElementById('backButton');
+
+        // Initialize the app
+        function init() {
+            renderConversations();
+            showEmptyState();
+        }
+
+        // Render conversations list
+        function renderConversations() {
+            conversationsList.innerHTML = conversations.map(conv => `
+                <div class="conversation-item flex items-center p-4 hover:bg-gray-50 cursor-pointer border-b border-gray-100 ${currentConversation === conv.id ? 'bg-blue-50 border-l-4 border-l-blue-500' : ''}" 
+                     data-conversation-id="${conv.id}">
+                    <div class="relative">
+                        <div class="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
+                            ${conv.avatar}
+                        </div>
+                        ${conv.online ? '<div class="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white rounded-full"></div>' : ''}
+                    </div>
+                    <div class="ml-3 flex-1 min-w-0">
+                        <div class="flex items-center justify-between">
+                            <h3 class="font-semibold text-gray-800 truncate">${conv.name}</h3>
+                            <span class="text-xs text-gray-500 flex-shrink-0">${conv.timestamp}</span>
+                        </div>
+                        <div class="flex items-center justify-between">
+                            <p class="text-sm text-gray-600 truncate">${conv.lastMessage}</p>
+                            ${conv.unread > 0 ? `<span class="bg-blue-500 text-white text-xs rounded-full px-2 py-1 ml-2">${conv.unread}</span>` : ''}
+                        </div>
+                    </div>
+                </div>
+            `).join('');
+
+            // Add click listeners
+            document.querySelectorAll('.conversation-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const convId = parseInt(item.dataset.conversationId);
+                    selectConversation(convId);
+                });
+            });
+        }
+
+        // Select a conversation
+        function selectConversation(conversationId) {
+            currentConversation = conversationId;
+            const conversation = conversations.find(c => c.id === conversationId);
+            
+            // Update UI
+            renderConversations(); // Re-render to show selection
+            showDetailView();
+            
+            // Update chat header
+            chatTitle.textContent = conversation.name;
+            chatStatus.textContent = conversation.online ? 'Online' : 'Last seen recently';
+            
+            // Load messages
+            loadMessages(conversationId);
+        }
+
+        // Load messages for a conversation
+        function loadMessages(conversationId) {
+            const conversationMessages = messages[conversationId] || [];
+            
+            messagesContainer.innerHTML = conversationMessages.map(msg => `
+                <div class="flex ${msg.sent ? 'justify-end' : 'justify-start'}">
+                    <div class="max-w-xs lg:max-w-md ${msg.sent ? 'bg-blue-500 text-white' : 'bg-white text-gray-800'} rounded-2xl px-4 py-2 shadow-sm">
+                        <p class="text-sm">${msg.content}</p>
+                        <p class="text-xs ${msg.sent ? 'text-blue-100' : 'text-gray-500'} mt-1">${msg.timestamp}</p>
+                    </div>
+                </div>
+            `).join('');
+            
+            // Scroll to bottom
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+
+        // Show detail view
+        function showDetailView() {
+            detailView.classList.remove('hidden');
+            detailView.classList.add('flex');
+            emptyState.classList.add('hidden');
+            
+            // On mobile, hide master view
+            if (window.innerWidth < 768) {
+                masterView.classList.add('hidden');
+            }
+        }
+
+        // Show empty state
+        function showEmptyState() {
+            if (window.innerWidth >= 768) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+                detailView.classList.add('hidden');
+                detailView.classList.remove('flex');
+            }
+        }
+
+        // Send message
+        function sendMessage() {
+            const messageText = messageInput.value.trim();
+            if (!messageText || !currentConversation) return;
+            
+            // Add message to current conversation
+            if (!messages[currentConversation]) {
+                messages[currentConversation] = [];
+            }
+            
+            const newMessage = {
+                id: Date.now(),
+                sender: "You",
+                content: messageText,
+                timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                sent: true
+            };
+            
+            messages[currentConversation].push(newMessage);
+            
+            // Update conversation's last message
+            const conversation = conversations.find(c => c.id === currentConversation);
+            conversation.lastMessage = messageText;
+            conversation.timestamp = "Just now";
+            
+            // Clear input and refresh views
+            messageInput.value = '';
+            loadMessages(currentConversation);
+            renderConversations();
+        }
+
+        // Back button functionality
+        backButton.addEventListener('click', () => {
+            masterView.classList.remove('hidden');
+            detailView.classList.add('hidden');
+            detailView.classList.remove('flex');
+            currentConversation = null;
+            renderConversations();
+        });
+
+        // Send button click
+        sendButton.addEventListener('click', sendMessage);
+
+        // Enter key to send message
+        messageInput.addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                sendMessage();
+            }
+        });
+
+        // Handle responsive behavior
+        window.addEventListener('resize', () => {
+            if (window.innerWidth >= 768) {
+                masterView.classList.remove('hidden');
+                if (currentConversation) {
+                    showDetailView();
+                } else {
+                    showEmptyState();
+                }
+            }
+        });
+
+        // Initialize the app
+        init();
+    </script>
+</body>
+</html>
