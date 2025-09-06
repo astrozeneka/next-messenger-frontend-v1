@@ -36,6 +36,7 @@ function parseMessageWithAttachment(content: string): { text: string; attachment
 interface FileAttachmentComponentProps {
   attachment: FileAttachment;
   isReceived: boolean;
+  isLastUserMessage?: boolean;
   onEditClick?: () => void;
   onDeleteClick?: () => void;
 }
@@ -43,6 +44,7 @@ interface FileAttachmentComponentProps {
 function FileAttachmentComponent({ 
   attachment, 
   isReceived, 
+  isLastUserMessage,
   onEditClick, 
   onDeleteClick
 }: FileAttachmentComponentProps) {
@@ -93,7 +95,11 @@ function FileAttachmentComponent({
       }
       
       let vertical: 'top' | 'bottom' = 'bottom';
-      if (containerRect) {
+      
+      // Special case: if this is the last message sent by the user, position menu at top
+      if (!isReceived && isLastUserMessage) {
+        vertical = 'top';
+      } else if (containerRect) {
         const messageTop = menuRect.top;
         const containerTop = containerRect.top;
         const containerHeight = containerRect.height;
@@ -111,7 +117,7 @@ function FileAttachmentComponent({
 
   if (isImage) {
     return (
-      <div ref={attachmentRef} className={`mt-1 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+      <div ref={attachmentRef} className={`mt-1 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
         {/* Three-dot menu for sent messages with attachments */}
         {!isReceived && (onEditClick || onDeleteClick) && (
           <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
@@ -198,7 +204,7 @@ function FileAttachmentComponent({
   }
 
   return (
-    <div ref={attachmentRef} className={`mt-1 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+    <div ref={attachmentRef} className={`mt-1 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages with attachments */}
       {!isReceived && (onEditClick || onDeleteClick) && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
@@ -287,11 +293,12 @@ interface DecryptedMessageProps {
   message: Msg;
   encryptionKey: string | null;
   isReceived: boolean;
+  isLastUserMessage?: boolean;
   onEditClick?: (message: Msg, decryptedContent: string) => void;
   onDeleteClick?: (message: Msg) => void;
 }
 
-function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onDeleteClick }: DecryptedMessageProps) {
+function DecryptedMessage({ message, encryptionKey, isReceived, isLastUserMessage, onEditClick, onDeleteClick }: DecryptedMessageProps) {
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
   const [showMenu, setShowMenu] = useState(false);
@@ -393,7 +400,11 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
       
       // Calculate vertical position
       let vertical: 'top' | 'bottom' = 'bottom';
-      if (containerRect) {
+      
+      // Special case: if this is the last message sent by the user, position menu at top
+      if (!isReceived && isLastUserMessage) {
+        vertical = 'top';
+      } else if (containerRect) {
         const messageTop = menuRect.top;
         const containerTop = containerRect.top;
         const containerHeight = containerRect.height;
@@ -414,9 +425,9 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   // Handle image-only messages without bubble
   if (isImageOnly) {
     return (
-      <div ref={messageRef} className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
-        {/* Three-dot menu for sent messages */}
-        {!isReceived && (
+      <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+        {/* Three-dot menu for sent messages - only show if there's text content */}
+        {false && (
           <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
             <button
               onClick={toggleMenu}
@@ -462,6 +473,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
           <FileAttachmentComponent 
             attachment={attachment!} 
             isReceived={isReceived}
+            isLastUserMessage={isLastUserMessage}
             onEditClick={!isReceived ? () => onEditClick?.(message, decryptedContent) : undefined}
             onDeleteClick={!isReceived ? () => onDeleteClick?.(message) : undefined}
           />
@@ -505,9 +517,9 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
   }
 
   return (
-    <div ref={messageRef} className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+    <div ref={messageRef} className={`mt-2 flex items-start ${isReceived ? 'justify-start' : 'justify-end'} group`}>
       {/* Three-dot menu for sent messages */}
-      {!isReceived && decryptedContent !== '[deleted]' && (
+      {!isReceived && decryptedContent !== '[deleted]' && text.trim() && (
         <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
           <button
             onClick={toggleMenu}
@@ -550,9 +562,11 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
       )}
       
       <div className="flex flex-col space-y-1">
-        <div className={`max-w-xs lg:max-w-md ${
-          isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
-        } rounded-2xl px-4 py-2 shadow-sm`}>
+        {/* Only show text bubble if there's text content */}
+        {text.trim() && (
+          <div className={`max-w-xs lg:max-w-md ${
+            isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
+          } rounded-2xl px-4 py-2 shadow-sm`}>
           {decryptedContent === '[deleted]' ? (
             <p className={`text-sm italic ${
               isReceived 
@@ -602,14 +616,16 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
               </div>
             </div>
           )}
-        </div>
+          </div>
+        )}
         
         {/* Show attachment if present */}
         {attachment && (
           <FileAttachmentComponent 
             attachment={attachment} 
             isReceived={isReceived}
-            onEditClick={!isReceived ? () => onEditClick?.(message, decryptedContent) : undefined}
+            isLastUserMessage={isLastUserMessage}
+            onEditClick={!isReceived && text.trim() ? () => onEditClick?.(message, decryptedContent) : undefined}
             onDeleteClick={!isReceived ? () => onDeleteClick?.(message) : undefined}
           />
         )}
@@ -1181,16 +1197,24 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
 
       {/* Messages Container */}
       <div className="flex-1 overflow-y-auto p-4 bg-gray-50 dark:bg-gray-900" style={{ display: 'flex', flexDirection: 'column-reverse' }} onScroll={handleScroll}>
-        {messages.slice().reverse().map((msg) => (
-          <DecryptedMessage
-            key={msg.id}
-            message={msg}
-            encryptionKey={user?.private_key!}
-            isReceived={msg.sender_id !== user?.id}
-            onEditClick={handleStartEdit}
-            onDeleteClick={handleDeleteMessage}
-          />
-        ))}
+        {messages.slice().reverse().map((msg, index, reversedMessages) => {
+          const isReceived = msg.sender_id !== user?.id;
+          // Find the last message sent by the user (first non-received message in the reversed array)
+          const lastUserMessageId = reversedMessages.find(m => m.sender_id === user?.id)?.id;
+          const isLastUserMessage = !isReceived && msg.id === lastUserMessageId;
+          
+          return (
+            <DecryptedMessage
+              key={msg.id}
+              message={msg}
+              encryptionKey={user?.private_key!}
+              isReceived={isReceived}
+              isLastUserMessage={isLastUserMessage}
+              onEditClick={handleStartEdit}
+              onDeleteClick={handleDeleteMessage}
+            />
+          );
+        })}
         
         {messages.length === 0 && (
           <div className="flex flex-1 flex-col items-center justify-center py-12">
