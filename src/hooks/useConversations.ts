@@ -119,7 +119,6 @@ export const useConversations = (userId?: string, token?: string) => {
         const bBatchId = b.latest_message.batch_id || 0;
         return bBatchId - aBatchId; // Higher batch_id first
       });
-      console.log("UUU", output);
       return output;
     });
     console.log('Conversations after update:', conversations);

@@ -20,7 +20,7 @@ interface Notice extends Msg {
 /**
  * The channel-id should be the user-id
  */
-export const useMessages = (channel: string = 'chat', currentUserId?: string, token?: string, conversationId?: string, publicKeyId?: string, onPublicKey?: () => void) => {
+export const useMessages = (channel: string = 'chat', currentUserId?: string, token?: string, conversationId?: string, publicKeyId?: string, onPublicKey?: (publicKeyId: string) => void) => {
   const [messages, setMessages] = useState<Msg[]>([]);
   const [isConnected, setIsConnected] = useState(false);
 
@@ -131,9 +131,9 @@ export const useMessages = (channel: string = 'chat', currentUserId?: string, to
         
         // Trigger public key refresh callback when receiving message status updates
         // This allows ConversationDetail to detect if it needs to refresh public keys
-        if (onPublicKey) {
-          console.log("Triggering onPublicKey callback from message-status-updated");
-          onPublicKey();
+        if (onPublicKey && data.public_key_id) {
+          console.log("Triggering onPublicKey with", data.public_key_id);
+          onPublicKey(data.public_key_id);
         }
       }
     });

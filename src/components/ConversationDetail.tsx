@@ -476,10 +476,16 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
   const [editingMessageContent, setEditingMessageContent] = useState<string>('');
 
-  // Function to check and refresh public keys if needed
-  const handlePublicKeyCheck = useCallback(async () => {
-    if (!token || !remoteUser) return;
+
+  // Use useRef to always have access to the latest remoteUser value
+  const remoteUserRef = useRef(remoteUser);
+  remoteUserRef.current = remoteUser;
+
+  // Create a stable callback that uses the ref
+  const handlePublicKeyCheckStable = useCallback(async (publicKeyId: string) => {
+    if (!token || !remoteUserRef.current) return;
     
+    // Patching the B user's first login issue where public key is not yet registered
     try {
       const response = await fetch(`/api/conversations/${conversationId}/users`, {
         headers: {
@@ -495,29 +501,21 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
       }
       
       const updatedRemoteUser = data[0];
-      
-      // Compare current public keys with updated ones
-      const currentKeyIds = remoteUser.public_keys.map(key => key.id);
-      const updatedKeyIds = updatedRemoteUser.public_keys.map((key: any) => key.id);
-      
-      // Check if there are new keys that we don't have
-      const hasNewKeys = updatedKeyIds.some((keyId: string) => !currentKeyIds.includes(keyId));
-      
-      if (hasNewKeys) {
-        console.log('New public keys detected, refreshing user data');
-        setRemoteUser(updatedRemoteUser);
-      }
+      console.log('Public keys refreshed successfully');
+      setRemoteUser(updatedRemoteUser);
     } catch (error) {
-      console.error('Error checking public keys:', error);
+      console.error('Error refreshing public keys:', error);
     }
-  }, [token, conversationId, remoteUser]);
+
+  }, [token, conversationId, setRemoteUser]);
+  
   const { messages, isConnected, initializeMessages, prependMessages } = useMessages(
     `conversation.${conversationId}`,
     user?.id,
     token || undefined,
     conversationId,
     (user?.public_key as any)?.id,
-    handlePublicKeyCheck
+    handlePublicKeyCheckStable
   );
   //const { updateUnreadCount } = useConversations(user?.id, token || undefined);
 
