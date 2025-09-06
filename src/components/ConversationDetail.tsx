@@ -345,7 +345,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
 
       console.log("Public key list", [...remoteUser.public_keys, user?.public_key!])
       
-      // Encrypt message for each public key and prepare data for batch send
+      // Encrypt message for each public key and prepare data for batch sending
       const encryptedMessages = [];
       for (const publicKey of [...remoteUser.public_keys, user?.public_key!]) {
         const encryptedMessage = await encryptMessage(messageToSend, (publicKey as any).public_key_value);
@@ -383,7 +383,7 @@ export default function ConversationDetail({ conversationId }: ConversationDetai
         fileInput.value = '';
       }
     } catch (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message -:', error);
     } finally {
       setIsSending(false);
     }
