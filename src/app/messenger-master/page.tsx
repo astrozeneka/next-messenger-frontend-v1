@@ -238,13 +238,13 @@ export default function MessengerMaster() {
       <div className="w-full md:w-1/3 bg-white dark:bg-gray-800 border-r border-gray-200 dark:border-gray-700 flex flex-col">
         {/* Header */}
         <div className="bg-white dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700 p-4 flex items-center justify-between">
-          <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Messages</h1>
+          <h1 className="text-xl font-semibold text-gray-800 dark:text-white">Next Messenger</h1>
           <div className="flex items-center space-x-3">
-            <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+            {/*<button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
               <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
               </svg>
-            </button>
+            </button>*/}
             <button 
               onClick={logout}
               className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full"
@@ -258,7 +258,7 @@ export default function MessengerMaster() {
         </div>
 
         {/* Search Bar */}
-        <div className="p-4 bg-gray-50 dark:bg-gray-800/50">
+        {/* <div className="p-4 bg-gray-50 dark:bg-gray-800/50">
           <div className="relative">
             <svg className="w-4 h-4 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 dark:text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -269,7 +269,7 @@ export default function MessengerMaster() {
               className="w-full pl-10 pr-4 py-2 border border-gray-300 dark:border-gray-600 rounded-full focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-white dark:bg-gray-700 text-gray-800 dark:text-white placeholder-gray-500 dark:placeholder-gray-400"
             />
           </div>
-        </div>
+        </div> */}
 
         {/* Conversations List */}
         <div className="flex-1 overflow-y-auto">
@@ -287,7 +287,7 @@ export default function MessengerMaster() {
                     <div className="w-12 h-12 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-semibold">
                       {conversation.name.charAt(0).toUpperCase()}
                     </div>
-                    <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></div>
+                    {/*<div className="absolute -bottom-1 -right-1 w-4 h-4 bg-green-400 border-2 border-white dark:border-gray-800 rounded-full"></div>*/}
                   </div>
                   <div className="ml-3 flex-1 min-w-0">
                     <div className="flex items-center justify-between">
@@ -322,6 +322,11 @@ export default function MessengerMaster() {
               <p className="text-gray-500 dark:text-gray-400 text-sm">Start a new conversation to begin messaging</p>
             </div>
           )}
+        </div>
+
+        {/* @copyright 2025 Next Messenger. All rights reserved. */}
+        <div className="p-3 text-center border-t border-gray-200 dark:border-gray-700">
+          <p className="text-xs text-gray-400 dark:text-gray-500">© 2025 Next Messenger</p>
         </div>
       </div>
 

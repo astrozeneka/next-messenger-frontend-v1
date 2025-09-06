@@ -242,7 +242,7 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
                   return text.trim() && (
                     <button
                       onClick={handleEditClick}
-                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2 flex items-center justify-center"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
@@ -906,7 +906,6 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             <h2 className="font-semibold text-gray-800 dark:text-white">{remoteUser.name}</h2>
             <p className="text-sm text-gray-500 dark:text-gray-400">
               {isConnected ? 'Online' : 'Last seen recently'}
-              <span> { hasMoreMessages ? '• Has more messages' : '• No more messages' }</span>
             </p>
           </div>
         </div>
@@ -990,9 +989,9 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             {!editingMessage && (
               <button
                 onClick={handleSendFileClick}
-                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full inline-block w-8 h-8"
+                className="p-1 hover:bg-gray-200 dark:hover:bg-gray-600 rounded-full w-8 h-8 flex items-center justify-center"
               >
-                <svg className="w-4 h-4 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-6 h-6 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
                 </svg>
               </button>
