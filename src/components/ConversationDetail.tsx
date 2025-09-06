@@ -5,7 +5,7 @@ import { useMessages } from "@/hooks/useMessages";
 // import { useConversations } from "@/hooks/useConversations";
 import { encryptMessage, getPrivateKey, decryptMessage } from "@/lib/crypto";
 import { formatMessageTime } from "@/lib/dateUtils";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 export interface Msg {
   id: string
@@ -16,6 +16,7 @@ export interface Msg {
   content: string
   type: string
   status: string
+  batch_id?: number
 }
 
 interface DecryptedMessageProps {
@@ -23,11 +24,14 @@ interface DecryptedMessageProps {
   encryptionKey: string | null;
   isReceived: boolean;
   onEditClick?: (message: Msg, decryptedContent: string) => void;
+  onDeleteClick?: (message: Msg) => void;
 }
 
-function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: DecryptedMessageProps) {
+function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onDeleteClick }: DecryptedMessageProps) {
   const [decryptedContent, setDecryptedContent] = useState<string>('');
   const [isDecrypting, setIsDecrypting] = useState(true);
+  const [showMenu, setShowMenu] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const decrypt = async () => {
@@ -51,6 +55,22 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
     decrypt();
   }, [message, encryptionKey]);
 
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(event.target as Node)) {
+        setShowMenu(false);
+      }
+    };
+
+    if (showMenu) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [showMenu]);
+
   if (isDecrypting) {
     return (
       <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'}`}>
@@ -67,10 +87,59 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
     if (onEditClick) {
       onEditClick(message, decryptedContent);
     }
+    setShowMenu(false);
+  };
+
+  const handleDeleteClick = () => {
+    if (onDeleteClick) {
+      onDeleteClick(message);
+    }
+    setShowMenu(false);
+  };
+
+  const toggleMenu = () => {
+    setShowMenu(!showMenu);
   };
 
   return (
-    <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'}`}>
+    <div className={`mt-2 flex ${isReceived ? 'justify-start' : 'justify-end'} group`}>
+      {/* Three-dot menu for sent messages */}
+      {!isReceived && (
+        <div className="flex items-start pt-2 pr-2 relative" ref={menuRef}>
+          <button
+            onClick={toggleMenu}
+            className="p-1 rounded-full hover:bg-gray-200 dark:hover:bg-gray-600"
+          >
+            <svg className="w-4 h-4 text-gray-500 dark:text-gray-400" fill="currentColor" viewBox="0 0 20 20">
+              <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
+            </svg>
+          </button>
+          
+          {showMenu && (
+            <div className="absolute right-0 top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
+              <button
+                onClick={handleEditClick}
+                className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span>Edit</span>
+              </button>
+              <button
+                onClick={handleDeleteClick}
+                className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                <span>Delete</span>
+              </button>
+            </div>
+          )}
+        </div>
+      )}
+      
       <div className={`max-w-xs lg:max-w-md ${
         isReceived ? 'bg-white dark:bg-gray-700 text-gray-800 dark:text-white' : 'bg-blue-500 text-white'
       } rounded-2xl px-4 py-2 shadow-sm`}>
@@ -110,14 +179,6 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
               </div>
             )}
           </div>
-          {!isReceived && (
-            <button 
-              onClick={handleEditClick}
-              className="text-xs text-blue-100 hover:text-white ml-2"
-            >
-              Edit
-            </button>
-          )}
         </div>
       </div>
     </div>
@@ -343,7 +404,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
 
     // If editing, handle edit instead of send
     if (editingMessage) {
-      await handleEditMessage(editingMessage.id, message.trim());
+      await handleEditMessage(editingMessage, message.trim());
       return;
     }
 
@@ -458,37 +519,88 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
     }
   };
 
+  const handleDeleteMessage = async (messageToDelete: Msg) => {
+    if (!confirm('Are you sure you want to delete this message?')) {
+      return;
+    }
+
+    // Delete is equivalent to editing the message to "[deleted]"
+    await handleEditMessage(messageToDelete, '[deleted]');
+  };
+
   const handleCancelEdit = () => {
     setEditingMessage(null);
     setMessage('');
   };
 
-  const handleEditMessage = async (messageId: string, newContent: string) => {
-    if (!remoteUser?.public_keys || remoteUser.public_keys.length === 0 || !token) {
-      console.error('Remote user public keys or token not available');
+  const handleEditMessage = async (messageEntity: Msg, newContent: string) => {
+    if (!remoteUser?.public_keys || remoteUser.public_keys.length === 0 || !token || !user?.public_key) {
+      console.error('Remote user public keys, user public key, or token not available');
       return;
     }
 
     try {
-      const encryptedMessage = await encryptMessage(newContent, remoteUser.public_keys[0].public_key_value);
-      const response = await fetch(`/api/msgs/${messageId}`, {
-        method: 'PUT',
+      // Get all messages in the same batch using batch_id
+      const batchResponse = await fetch(`/api/msgs/batch?batch_id=${messageEntity.batch_id}`, {
+        method: 'GET',
         headers: {
-          'Content-Type': 'application/json',
           'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          content: encryptedMessage
-        })
+        }
       });
 
-      if (response.ok) {
-        const data = await response.json();
-        console.log('Message edited successfully:', data);
+      if (!batchResponse.ok) {
+        console.error('Error getting batch messages:', batchResponse.statusText);
+        return;
+      }
+
+      const batchData = await batchResponse.json();
+      const messagesInBatch = batchData.messages;
+
+      // Encrypt message for each public key
+      const encryptedMessages = [];
+      for (const publicKey of [...remoteUser.public_keys, user?.public_key!]) {
+        const encryptedMessage = await encryptMessage(newContent, (publicKey as any).public_key_value);
+        encryptedMessages.push({
+          public_key_id: (publicKey as any).id,
+          content: encryptedMessage
+        });
+      }
+
+      // Send separate requests for each encrypted message
+      const updatePromises = [];
+      for (const encryptedMsg of encryptedMessages) {
+        // Find the corresponding message in the batch for this public key
+        const messageToUpdate = messagesInBatch.find((msg: any) => 
+          msg.public_key_id?.toString() === encryptedMsg.public_key_id.toString()
+        );
+
+        if (messageToUpdate) {
+          const updatePromise = fetch(`/api/msgs/${messageToUpdate.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({
+              content: encryptedMsg.content
+            })
+          });
+          updatePromises.push(updatePromise);
+        }
+      }
+
+      // Wait for all updates to complete
+      const responses = await Promise.all(updatePromises);
+      const allSuccessful = responses.every(response => response.ok);
+
+      console.log("====>edit message", newContent)
+
+      if (allSuccessful) {
+        console.log('All messages edited successfully');
         setEditingMessage(null);
         setMessage('');
       } else {
-        console.error('Error editing message:', response.statusText);
+        console.error('Some message updates failed');
       }
     } catch (error) {
       console.error('Error editing message:', error);
@@ -567,6 +679,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             encryptionKey={user?.private_key!}
             isReceived={msg.sender_id !== user?.id}
             onEditClick={handleStartEdit}
+            onDeleteClick={handleDeleteMessage}
           />
         ))}
         
