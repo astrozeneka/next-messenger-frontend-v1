@@ -127,9 +127,8 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick }: D
 function EncryptionNotice() {
   return (
     <div className="text-center mb-3">
-      <p className="text-sm">
-        This conversation is end-to-end encrypted. Messages are encrypted on your device before being sent and can only be decrypted by the intended recipient.
-        Thus, it is impossible to recover previous messages.
+      <p className="text-sm text-gray-500 dark:text-gray-400">
+        End-to-end encryption is enabled for this conversation. It is impossible to fetch previous messages.
       </p>
     </div>
   );
@@ -500,8 +499,15 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
 
   if (!remoteUser) {
     return (
-      <div className="flex-1 flex items-center justify-center">
-        <div className="text-gray-500">Loading conversation...</div>
+      <div className="flex-1 flex items-center justify-center bg-gray-50 dark:bg-gray-900" style={{height: '100vh'}}>
+        <div className="flex flex-1 flex-col items-center space-y-4">
+          <div className="flex flex-1 space-x-2">
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce"></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.1s'}}></div>
+            <div className="w-3 h-3 bg-blue-500 rounded-full animate-bounce" style={{animationDelay: '0.2s'}}></div>
+          </div>
+          <div className="text-gray-600 dark:text-gray-400 text-sm">Loading conversation...</div>
+        </div>
       </div>
     );
   }
@@ -534,7 +540,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
           </div>
         </div>
         <div className="flex items-center space-x-2">
-          <button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
+          {/*<button className="p-2 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-full">
             <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
             </svg>
@@ -548,7 +554,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
             <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-          </button>
+          </button> */}
         </div>
       </div>
 
@@ -565,7 +571,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
         ))}
         
         {messages.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-12">
+          <div className="flex flex-1 flex-col items-center justify-center py-12">
             <div className="w-16 h-16 mb-4 bg-gray-100 dark:bg-gray-700 rounded-full flex items-center justify-center">
               <svg className="w-8 h-8 text-gray-400 dark:text-gray-500" fill="currentColor" viewBox="0 0 24 24">
                 <path d="M20 2H4c-1.1 0-2 .9-2 2v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm-7 12l-4-4h3V6h2v4h3l-4 4z"/>
