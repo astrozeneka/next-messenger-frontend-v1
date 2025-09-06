@@ -220,15 +220,21 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
             
             {showMenu && (
               <div className="absolute right-0 top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
-                <button
-                  onClick={handleEditClick}
-                  className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-                >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
-                  <span>Edit</span>
-                </button>
+                {/* Only show Edit button if message has text content */}
+                {(() => {
+                  const { text } = parseMessageWithAttachment(decryptedContent);
+                  return text.trim() && (
+                    <button
+                      onClick={handleEditClick}
+                      className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                      </svg>
+                      <span>Edit</span>
+                    </button>
+                  );
+                })()}
                 <button
                   onClick={handleDeleteClick}
                   className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
@@ -300,15 +306,21 @@ function DecryptedMessage({ message, encryptionKey, isReceived, onEditClick, onD
           
           {showMenu && (
             <div className="absolute right-0 top-10 w-32 bg-white dark:bg-gray-800 rounded-lg shadow-lg border border-gray-200 dark:border-gray-700 py-1 z-10">
-              <button
-                onClick={handleEditClick}
-                className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
-              >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                </svg>
-                <span>Edit</span>
-              </button>
+              {/* Only show Edit button if message has text content */}
+              {(() => {
+                const { text } = parseMessageWithAttachment(decryptedContent);
+                return text.trim() && (
+                  <button
+                    onClick={handleEditClick}
+                    className="w-full text-left px-3 py-2 text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 flex items-center space-x-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                    </svg>
+                    <span>Edit</span>
+                  </button>
+                );
+              })()}
               <button
                 onClick={handleDeleteClick}
                 className="w-full text-left px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 flex items-center space-x-2"
@@ -428,6 +440,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   } | null>(null);
   const [encryptionKey, setEncryptionKey] = useState<string | null>(null);
   const [editingMessage, setEditingMessage] = useState<Msg | null>(null);
+  const [editingMessageContent, setEditingMessageContent] = useState<string>('');
 
   // Used for managing pagination
   let [furthestId, setFurthestId] = useState<number | null>(null);
@@ -714,8 +727,12 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   };
 
   const handleStartEdit = (messageToEdit: Msg, decryptedContent: string) => {
+    const { text } = parseMessageWithAttachment(decryptedContent);
+    
     setEditingMessage(messageToEdit);
-    setMessage(decryptedContent);
+    setEditingMessageContent(decryptedContent);
+    // Set only the text content (without attachment metadata) in the edit form
+    setMessage(text);
     // Clear any selected file when starting to edit
     setSelectedFile(null);
     const fileInput = document.getElementById(`file-input-${conversationId}`) as HTMLInputElement;
@@ -725,9 +742,9 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
   };
 
   const handleDeleteMessage = async (messageToDelete: Msg) => {
-    if (!confirm('Are you sure you want to delete this message?')) {
+    /*if (!confirm('Are you sure you want to delete this message?')) {
       return;
-    }
+    }*/
 
     // Delete is equivalent to editing the message to "[deleted]"
     await handleEditMessage(messageToDelete, '[deleted]');
@@ -735,6 +752,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
 
   const handleCancelEdit = () => {
     setEditingMessage(null);
+    setEditingMessageContent('');
     setMessage('');
   };
 
@@ -745,6 +763,24 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
     }
 
     try {
+      // Use the already-decrypted content that includes attachment metadata
+      const originalDecryptedContent = editingMessageContent;
+      
+      // Parse the original content to extract attachment metadata
+      const { attachment: originalAttachment } = parseMessageWithAttachment(originalDecryptedContent);
+      
+      // If there was an attachment in the original message, re-attach it to the new content
+      let finalContent = newContent;
+      if (originalAttachment) {
+        // Re-construct the message with the new text and original attachment
+        finalContent = newContent.trim() 
+          ? `${newContent.trim()} (${originalAttachment.fileName})[${originalAttachment.url}]`
+          : `(${originalAttachment.fileName})[${originalAttachment.url}]`;
+      }
+      console.log("Original decrypted content:", originalDecryptedContent); // This doesn't include the attachment
+      console.log('Final content to encrypt:', finalContent);
+      console.log('Original attachment:', originalAttachment); // This returns NULL
+
       // Get all messages in the same batch using batch_id
       const batchResponse = await fetch(`/api/msgs/batch?batch_id=${messageEntity.batch_id}`, {
         method: 'GET',
@@ -764,7 +800,7 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
       // Encrypt message for each public key
       const encryptedMessages = [];
       for (const publicKey of [...remoteUser.public_keys, user?.public_key!]) {
-        const encryptedMessage = await encryptMessage(newContent, (publicKey as any).public_key_value);
+        const encryptedMessage = await encryptMessage(finalContent, (publicKey as any).public_key_value);
         encryptedMessages.push({
           public_key_id: (publicKey as any).id,
           content: encryptedMessage
@@ -798,11 +834,12 @@ export default function ConversationDetail({ conversationId, onBack }: Conversat
       const responses = await Promise.all(updatePromises);
       const allSuccessful = responses.every(response => response.ok);
 
-      console.log("====>edit message", newContent)
+      console.log("====>edit message", finalContent)
 
       if (allSuccessful) {
         console.log('All messages edited successfully');
         setEditingMessage(null);
+        setEditingMessageContent('');
         setMessage('');
       } else {
         console.error('Some message updates failed');
